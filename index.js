@@ -177,6 +177,7 @@ wss.on('connection', function connection(ws) {
                     ws_data_obj.player_index = active_games[data.room_id].players.length - 1;
                     ws.send(JSON.stringify({
                         state: "waiting_room",
+                        uid: data.room_id,
                         players: active_games[data.room_id].players.map((i, ii) => active_games[data.room_id].player_order[ii]),
                         player_alias: active_games[data.room_id].player_order[active_games[data.room_id].players.length - 1]
                     }));
@@ -324,37 +325,56 @@ wss.on('connection', function connection(ws) {
                     })
                     return;
                 }
-                currentRoom.players.splice(ws_data_obj.player_index, 1);
-                if (currentRoom.players.length == 0) {
-                    currentRoom.host.close();
-                    return;
-                }
-                currentRoom.player_order.splice(ws_data_obj.player_index, 1);
-                for (let i of currentRoom.players) {
-                    i.ws.send(JSON.stringify({
-                        state: "player_disconnected",
-                        leaver: ws_data_obj.player_index,
-                        remaining: currentRoom.players.map((i, ii) => currentRoom.player_order[ii])
-                    }))
-                }
-                currentRoom.host.send(JSON.stringify({
-                    state: "player_disconnected",
-                    player: ws_data_obj.player_index
-                }))
-                let alt_order = currentRoom.players.map((i, ii) => ii).shuffled();
-                console.log(round_clustering[currentRoom.players.length - 1]);
-                console.log(currentRoom.players.length - 1)
-                currentRoom.player_sets = round_clustering[currentRoom.players.length - 1].map((i, ii) => {
-                    let subset = alt_order.splice(0, i);
-                    for (let i of subset) {
-                        currentRoom.players[i].set = ii;
+                if ("current_round" in currentRoom) {
+                    //game has started
+                    currentRoom.players.splice(ws_data_obj.player_index, 1);
+                    if (currentRoom.players.length == 0) {
+                        currentRoom.host.close();
+                        return;
                     }
-                    return subset;
-                });
-                clearTimeout(currentRoom.prestartTimeout);
-                clearTimeout(currentRoom.billExpiryTimeout);
-                currentRoom.current_set = 0;
-                progressRoom(currentRoom);
+                    currentRoom.player_order.splice(ws_data_obj.player_index, 1);
+                    for (let i of currentRoom.players) {
+                        i.ws.send(JSON.stringify({
+                            state: "player_disconnected",
+                            leaver: ws_data_obj.player_index,
+                            remaining: currentRoom.players.map((i, ii) => currentRoom.player_order[ii])
+                        }))
+                    }
+                    currentRoom.host.send(JSON.stringify({
+                        state: "player_disconnected",
+                        player: ws_data_obj.player_index
+                    }))
+                    let alt_order = currentRoom.players.map((i, ii) => ii).shuffled();
+                    console.log(round_clustering[currentRoom.players.length - 1]);
+                    console.log(currentRoom.players.length - 1)
+                    currentRoom.player_sets = round_clustering[currentRoom.players.length - 1].map((i, ii) => {
+                        let subset = alt_order.splice(0, i);
+                        for (let i of subset) {
+                            currentRoom.players[i].set = ii;
+                        }
+                        return subset;
+                    });
+                    clearTimeout(currentRoom.prestartTimeout);
+                    clearTimeout(currentRoom.billExpiryTimeout);
+                    currentRoom.current_set = 0;
+                    progressRoom(currentRoom);
+                } else {
+                    currentRoom.players.splice(ws_data_obj.player_index, 1);
+                    currentRoom.player_order.splice(ws_data_obj.player_index, 1);
+                    //resend waiting room for all players
+                    currentRoom.players.forEach(i => {
+                        i.ws.send(JSON.stringify({
+                            state: "waiting_room",
+                            uid: data.room_id,
+                            players: active_games[data.room_id].players.map((i, ii) => active_games[data.room_id].player_order[ii]),
+                            player_alias: active_games[data.room_id].player_order[active_games[data.room_id].players.length - 1]
+                        }));
+                    });
+                    currentRoom.host.send(JSON.stringify({
+                        state: "player_disconnected",
+                        player: ws_data_obj.player_index
+                    }));
+                }
             }
         })
     });

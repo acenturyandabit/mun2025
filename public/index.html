@@ -120,7 +120,7 @@
         <button class="wstart" onclick="hostStart()">Waiting for start...</button>
         <div class="country-lore"></div>
         <div class="player-list">
-            <h3>Other players:</h3>
+            <h3 class="player-head">Other players:</h3>
         </div>
     </div>
     <div data-screen="main">
@@ -324,11 +324,13 @@
                         case "waiting_room":
                             //take them to the waiting room
                             document.querySelector(".wstart").disabled = true;
+                            Array.from(document.querySelectorAll(".player-list div")).forEach(i => i.remove());
                             for (let i of data.players) {
                                 let d = document.createElement("div");
                                 d.innerText = i;
                                 document.querySelector(".player-list").appendChild(d);
                             }
+                            renderTo("#gid_rep", data.uid);
                             renderTo(".nation-name", `
                             <p>You are the diplomat for</p>
                             <h2>${data.player_alias}</h2>
@@ -588,6 +590,7 @@
                         case "created_room":
                             // take them to the waiting room
                             renderTo("#gid_rep", data.uid);
+                            renderTo(".player-head", "Players:");
                             renderTo(".nation-name", "<p>You are the game host. (If you would like to play, please open a new window.)</p> <img src='logo.svg'>");
                             document.querySelector(".wstart").disabled = false;
                             document.querySelector(".wstart").innerText = "Press to start";
@@ -605,7 +608,7 @@
                             document.querySelector(".wstart").style.display = "none";
                             break;
                         case "player_disconnected":
-                            Array.from(document.querySelectorAll(".player-list button"))[data.player].parentElement.remove();
+                            Array.from(document.querySelectorAll(".player-list div"))[data.player].remove();
                             break;
                         case "action_ticker":
 
