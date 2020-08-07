@@ -1,0 +1,638 @@
+<html>
+
+<head>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/dragula/3.7.2/dragula.min.js'></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto@1&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Model UN 2021</title>
+    <link rel="icon" href="logo.svg">
+</head>
+
+<body>
+    <style>
+        body {
+            background-color: darkblue;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        * {
+            font-family: Roboto, sans-serif;
+            text-align: center;
+        }
+
+        [data-screen] {
+            width: 50vw;
+        }
+
+        @media screen and (max-aspect-ratio: 9/10) {
+            [data-screen] {
+                width: 100vw;
+            }
+        }
+
+        img {
+            width: 40%;
+            padding: 30px 0;
+        }
+    </style>
+    <div data-screen="landing">
+        <style>
+            [data-screen="landing"] {
+                align-items: center;
+                display: flex;
+                flex-direction: column;
+            }
+
+
+
+            [data-screen="landing"] {
+                display: block;
+                margin: 10px;
+            }
+
+            @keyframes red-flashy {
+                from {
+                    color: red
+                }
+
+                50% {
+                    color: white
+                }
+
+                to {
+                    color: red
+                }
+            }
+
+            [data-screen="landing"] h2.red_flashy {
+                animation: red-flashy 0.2s linear;
+            }
+
+            [data-screen="landing"] input,
+            [data-screen="landing"] button {
+                width: 100%;
+                margin: 10px;
+                padding: 10px;
+                font-size: 1.5em;
+            }
+
+            [data-screen="landing"] input::placeholder {
+                text-align: center;
+            }
+        </style>
+        <h1>Model UN 2021</h1>
+        <img src="logo.svg"></img>
+        <input id="gid" placeholder="Game ID"></input>
+        <button onclick="tryEnterGame()">Join Game</button>
+        <h2 id="invalid_gid" style="display:none">Invalid game ID :(</h2>
+        <button onclick="tryHostGame()">Host Game</button>
+        <!--<a href="acenturyandabit.github.io/mun2200">About</a>-->
+
+        <!-- first enter; choose to join or host a game -->
+    </div>
+    <div data-screen="waitingRoom">
+        <style>
+            [data-screen="waitingRoom"] {
+                align-items: center;
+                display: flex;
+                flex-direction: column;
+                width: 500px;
+            }
+
+            .player-list {
+                position: relative;
+                width: 50vw;
+            }
+
+            .player-list button {
+                position: absolute;
+                right: 0;
+            }
+        </style>
+        <h2>Game ID: <span id="gid_rep"></span></h2>
+        <div class="nation-name">
+            <p>You are the diplomat for</p>
+            <h2 class="nation_name"></h2>
+        </div>
+        <button class="wstart" onclick="hostStart()">Waiting for start...</button>
+        <div class="country-lore"></div>
+        <div class="player-list">
+            <h3>Other players:</h3>
+        </div>
+    </div>
+    <div data-screen="main">
+        <style>
+            [data-screen="main"] {
+                align-items: center;
+                display: flex;
+                flex-direction: column;
+                width: 500px;
+            }
+
+            [data-pane="action"] {
+                align-items: center;
+                display: flex;
+                flex-direction: column;
+                width: 500px;
+            }
+
+            .inter-round-modal {
+                position: absolute;
+                flex-direction: column;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                top: 0;
+                left: 0;
+                background: rgba(0, 0, 0, 0.7);
+                width: 100%;
+                height: 100%;
+            }
+        </style>
+        <p>Ambassador for <span class="nation-name-p"></span></p>
+        <p>Round <span class="current-round"></span> | <span class="current-mode"></span> </p>
+        <h3>Objective: <span class="instruction"></span> </h3>
+        <div data-pane="action">
+            <div class="arrange-order">
+                <style>
+                    .arrange-order {
+                        display: flex;
+                    }
+
+                    .arrange-order>div:first-of-type {
+                        padding-left: 10px;
+                    }
+
+                    .arrange-order p {
+                        user-select: none;
+                        margin: 0;
+                        padding: 10px;
+                    }
+
+                    body {
+                        position: relative;
+                    }
+
+                    .gu-mirror {
+                        position: absolute;
+                        user-select: none;
+                        display: none
+                    }
+                </style>
+                <div>
+                    <p>1</p>
+                    <p>2</p>
+                    <p>3</p>
+                    <p>4</p>
+                    <p>5</p>
+                    <p>6</p>
+                </div>
+                <div class="proto-resolution-dragdrop">
+                    <p>Resolution A</p>
+                    <p>Resolution B</p>
+                    <p>Resolution C</p>
+                    <p>Resolution F</p>
+                    <p>Resolution D</p>
+                    <p>Resolution E</p>
+                </div>
+            </div>
+            <p class="proto-resolution-score-container">Your score from this ordering:<span
+                    class="proto-resolution-score"></span></p>
+            <p>Drag to rearrange!</p>
+            <button class="submitbill" onclick="submitForApproval()">Submit ranking</button>
+        </div>
+        <div data-pane="leaderboard">
+            <style>
+                [data-pane='leaderboard'] {
+                    flex-direction: column;
+                }
+            </style>
+            <h2>Only diplomacy scores are shown here; intelligence scores are private.</h2>
+            <div class="inner-leaderboard">
+
+            </div>
+        </div>
+        <div data-pane="history">
+            <style>
+                [data-pane="history"] {
+                    flex-direction: column;
+                    height: 50vh;
+                }
+
+                .history-list {
+                    flex: 0 1 100%;
+                    overflow-y: auto;
+                }
+            </style>
+            <button class="billconf" onclick="confirmBill()" disabled>Accept last proposed bill</button>
+            <div class="history-list">
+            </div>
+            <p>Scroll down to view past bills from this round</p>
+        </div>
+        <div class="navigation">
+            <style>
+                .navigation>p:first-of-type {
+                    display: flex;
+                    flex-direction: row;
+                }
+            </style>
+            <p>
+                <button style="display:none" data-switch-pane="action">Propse bill</button>
+                <button data-switch-pane="history">View proposals</button>
+                <button data-switch-pane="leaderboard">Leaderboard</button>
+            </p>
+            <p>Time remaining: <span class="remaining-time"></span></p>
+        </div>
+        <div class="inter-round-modal">
+            <h3>Result:</h3>
+            <p class="roundresult">Bill passed / rejected</p>
+            <div class="accepted-bill-container">
+
+            </div>
+            <p>Your current score: <span class="playerscore"></span></p>
+            <p>Next round begins in <span class="inter-round-countdown"></span></p>
+        </div>
+    </div>
+    <div data-screen="podium">
+        <style>
+            .podium {
+                display: flex;
+                flex-direction: column;
+            }
+        </style>
+        <div class="podium">
+
+        </div>
+        <!--Show all players-->
+        <!--Start if admin-->
+        <!--premise and settings-->
+    </div>
+    <script>
+        let reveal_timers = [];
+
+        let room = {};
+        let drake = dragula([document.querySelector(".proto-resolution-dragdrop")], {
+            revertOnSpill: true
+        });
+        drake.on("dragend", (e) => {
+            //calculate the score if in diplomacy mode
+            room.present_order = Array.from(document.querySelectorAll(".proto-resolution-dragdrop p")).map(i => i.innerText[0].charCodeAt(0) - "A".charCodeAt(0));
+            if (room.current_set == room.own_set) {
+                let protoScore = room.present_order.reduce((p, i, ii) => p + (room.private_resolutions.indexOf(i) >= ii && room.private_resolutions.indexOf(i) < 4), 0);
+                renderTo(".proto-resolution-score", protoScore);
+            }
+
+            //highlight 'correct' elements
+        })
+        document.querySelector("#gid").addEventListener("keydown", (e) => {
+            if (e.key == "Enter") tryEnterGame();
+        })
+        function switchPanel(panes, pane, display) {
+            Array.from(document.querySelectorAll(`[data-${panes}]`)).forEach(i => i.style.display = "none");
+            Array.from(document.querySelectorAll(`[data-${panes}="${pane}"]`)).forEach(i => i.style.display = display || "flex");
+        }
+        switchPanel("screen", "landing");
+        function renderTo(selector, value) {
+            document.querySelector(selector).innerHTML = value;
+        }
+
+        function switchPane(pane) {
+            Array.from(document.querySelectorAll(`[data-switch-pane]`)).forEach(i => i.style.display = "block");
+            document.querySelector(`[data-switch-pane="${pane}"]`).style.display = "none";
+            switchPanel("pane", pane);
+        }
+        document.querySelector(".navigation").addEventListener("click", (e) => {
+            if (e.target.matches(`[data-switch-pane]`)) switchPane(e.target.dataset.switchPane);
+        })
+        let ws;
+        function tryEnterGame() {
+            try {
+                if (ws) ws.close();
+                ws = new WebSocket("ws://" + window.location.hostname + ":3320");
+                ws.onopen = () => {
+                    ws.send(JSON.stringify({
+                        action: "enter_game",
+                        room_id: document.querySelector("#gid").value
+                    }));
+                }
+                ws.addEventListener("message", (data) => {
+                    data = JSON.parse(data.data);
+                    switch (data.state) {
+                        case "waiting_room":
+                            //take them to the waiting room
+                            document.querySelector(".wstart").disabled = true;
+                            for (let i of data.players) {
+                                let d = document.createElement("div");
+                                d.innerText = i;
+                                document.querySelector(".player-list").appendChild(d);
+                            }
+                            renderTo(".nation-name", `
+                            <p>You are the diplomat for</p>
+                            <h2>${data.player_alias}</h2>
+                            <img src='flags/Flag_of_${data.player_alias.replace(/ /g, "_").replace("The", "the")}.svg'></img>
+                            `);
+                            room.player_alias = data.player_alias;
+                            switchPanel("screen", "waitingRoom");
+                            break;
+                        case "invalid_room":
+                            document.querySelector("#invalid_gid").innerText = "Invalid Room";
+                            document.querySelector("#invalid_gid").style.display = "block";
+                            document.querySelector("#invalid_gid").classList.remove("red_flashy");
+                            setTimeout(() => {
+                                document.querySelector("#invalid_gid").classList.add("red_flashy");
+                            }, 100)
+                            break;
+                        case "too_many_players":
+                            document.querySelector("#invalid_gid").innerText = "Room Full";
+                            document.querySelector("#invalid_gid").style.display = "block";
+                            document.querySelector("#invalid_gid").classList.remove("red_flashy");
+                            setTimeout(() => {
+                                document.querySelector("#invalid_gid").classList.add("red_flashy");
+                            }, 100)
+                            break;
+                        case "new_player":
+                            //add a new player
+                            let d = document.createElement("div");
+                            d.innerText = data.player_alias;
+                            document.querySelector(".player-list").appendChild(d);
+                            break;
+                        case "start_game":
+                            room.players = data.players;
+                            renderTo(".inter-round-modal", `
+                            <img src="logo.svg"></img>
+                            <h3>Entering summit...</h3>
+                            <p>Current round begins in <span class="inter-round-countdown">5</span></p>
+                            `);
+                            renderTo(".nation-name-p", room.player_alias)
+                            document.querySelector(".inter-round-modal").style.display = "flex";
+                            for (let i = 0; i < 4; i++) {
+                                reveal_timers.push(setTimeout(() => renderTo(".inter-round-countdown", 4 - i), 1000 * (i + 1)));
+                            }
+                            reveal_timers.push(setTimeout(() => document.querySelector(".inter-round-modal").style.display = "none", 5000));
+                            switchPanel("screen", "main");
+                            switchPanel("pane", "action");
+                            break;
+                        case "begin_round":
+                            renderTo(".current-round", `${data.current_round + 1} of ${data.total_rounds}`);
+                            console.log(data);
+                            room.current_set = data.current_set;
+                            room.current_round = data.current_round;
+                            room.own_set = data.own_set;
+                            room.private_resolutions = data.private_resolutions;
+                            room.present_order = data.resolutions.map((i, ii) => ii);
+                            if (data.current_set == data.own_set) {
+                                renderTo(".current-mode", "Diplomacy mode");
+                                renderTo(".instruction", "Prioritise bills " + data.private_resolutions.slice(0, 4).map((i, ii) => `${ii + 1}.${String.fromCharCode("A".charCodeAt(0) + i)}`).join(",") + "; failure = " + ((data.bill_penalty > 0) ? "+" + data.bill_penalty : data.bill_penalty));
+                                let protoScore = room.present_order.reduce((p, i, ii) => p + (room.private_resolutions.indexOf(i) >= ii && room.private_resolutions.indexOf(i) < 4), 0);
+                                document.querySelector(".proto-resolution-score-container").style.display = "block";
+                                renderTo(".proto-resolution-score", protoScore);
+                                renderTo(".billconf", "Accept last bill");
+                            } else {
+                                renderTo(".current-mode", "Intelligence mode");
+                                console.log(data.tracking_target);
+                                renderTo(".instruction", "Identify the ranking of " + room.players[data.tracking_target]);
+                                document.querySelector(".proto-resolution-score-container").style.display = "none";
+                                renderTo(".billconf", "You cannot vote in intelligence mode");
+                            }
+                            //render bills in ABCD order
+                            room.resolutions = data.resolutions;
+                            renderTo(".proto-resolution-dragdrop", data.resolutions.map((i, ii) => `<p>${String.fromCharCode("A".charCodeAt(0) + ii)}:${i}</p>`).join(" "))
+                            switchPanel("screen", "main");
+                            switchPane("action");
+                            //nerf historical bills
+                            renderTo(".history-list", `
+                                <h1>No bills submitted yet</h1>
+                            `)
+                            document.querySelector(".billconf").disabled = true;
+                            room.min_remaining = 3;
+                            room.sec_remaining = 0;
+                            renderTo(".remaining-time", `${room.min_remaining}:${room.sec_remaining > 10 ? "" : "0"}${room.sec_remaining}`);
+                            room.remaining_ticker = setInterval(() => {
+                                room.sec_remaining--;
+                                if (room.sec_remaining < 0) {
+                                    room.sec_remaining = 59;
+                                    room.min_remaining--;
+                                }
+                                renderTo(".remaining-time", `${room.min_remaining}:${room.sec_remaining >= 10 ? "" : "0"}${room.sec_remaining}`);
+                            }, 1000);
+                            //leaderboard
+                            renderTo(".inner-leaderboard", `
+                            ${data.all_scores.map((i, ii) => [room.players[ii], i]).sort((a, b) => b[1] - a[1]).map(i => `<p>${i[0]}:${i[1]}</p>`).join("")}
+                            `);
+                            break;
+                        case "bill_post":
+                            room.current_bill_id = data.bill_id;
+                            //render the bill
+                            let histlist = document.querySelector(".history-list")
+                            if (histlist.querySelector("h1")) document.querySelector(".history-list h1").remove();
+                            let new_bill_div = document.createElement("div");
+                            let new_bill_rows = data.bill.map((i, ii) => `<p>${String.fromCharCode("A".charCodeAt(0) + i)}:${room.resolutions[i]}</p>`).join(" ");
+                            let new_bill_score = data.bill.reduce((p, i, ii) => p + (room.private_resolutions.indexOf(i) >= ii && ii < 4), 0);
+                            new_bill_score = `<p>Your score from this bill: ${new_bill_score}</p>`
+                            new_bill_div.innerHTML = new_bill_rows + new_bill_score;
+                            if (room.current_set == room.own_set) document.querySelector(".billconf").disabled = false;
+                            new_bill_div.dataset.billid = room.current_bill_id;
+                            histlist.insertBefore(new_bill_div, histlist.children[0]);
+                            break;
+                        case "bill_confirmed":
+                            function decorate_bill() {
+                                let approvalSticker = document.createElement("div");
+                                approvalSticker.innerHTML = `<p>Approved by:${room.players[data.player_index]}</p>`
+                                document.querySelector(`[data-billid="${data.bill_id}"]`).appendChild(approvalSticker);
+                            }
+                            decorate_bill();
+                            break;
+                        case "bill_failed":
+                            renderTo(".inter-round-modal", `
+                            <h3>Result:</h3>
+            <p class="roundresult">Bill passed / rejected</p>
+            <div class="accepted-bill-container">
+
+            </div>
+            <p>Your current score: <span class="playerscore"></span></p>
+            <p>Next round begins in <span class="inter-round-countdown"></span></p>
+                            `)
+                            //say bill failed   
+                            renderTo(".roundresult", "Bill Rejected :(")
+                            clearTimeout(room.remaining_ticker);
+                            //update score
+                            document.querySelector(".accepted-bill-container").style.display = "none";
+                            renderTo(".playerscore", `${data.score} diplomacy / ${data.intel_score} intelligence = ${data.score + data.intel_score} total `);
+
+                            renderTo(".inter-round-countdown", 5);
+                            for (let i = 0; i < 4; i++) {
+                                reveal_timers.push(setTimeout(() => renderTo(".inter-round-countdown", 4 - i), 1000 * (i + 1)));
+                            }
+                            reveal_timers.push(setTimeout(() => document.querySelector(".inter-round-modal").style.display = "none", 5000));
+                            //show splash, start timer
+                            document.querySelector(".inter-round-modal").style.display = "flex";
+                            break;
+                        case "bill_passed":
+                            renderTo(".inter-round-modal", `
+                            <h3>Result:</h3>
+            <p class="roundresult">Bill passed / rejected</p>
+            <div class="accepted-bill-container">
+
+            </div>
+            <p>Your current score: <span class="playerscore"></span></p>
+            <p>Next round begins in <span class="inter-round-countdown"></span></p>
+                            `)
+                            document.querySelector(".inter-round-modal").style.display = "flex";
+                            renderTo(".roundresult", "Bill Passed!");
+                            document.querySelector(".accepted-bill-container").style.display = "block";
+                            let win_bill_rows = data.bill.map((i, ii) => `<p>${String.fromCharCode("A".charCodeAt(0) + i)}:${room.resolutions[i]}</p>`).join(" ");
+                            renderTo(".accepted-bill-container", win_bill_rows);
+                            clearTimeout(room.remaining_ticker);
+
+                            renderTo(".inter-round-countdown", 5);
+                            for (let i = 0; i < 4; i++) {
+                                reveal_timers.push(setTimeout(() => renderTo(".inter-round-countdown", 4 - i), 1000 * (i + 1)));
+                            }
+                            reveal_timers.push(setTimeout(() => document.querySelector(".inter-round-modal").style.display = "none", 5000));
+
+                            renderTo(".playerscore", `${data.score} diplomacy / ${data.intel_score} intelligence = ${data.score + data.intel_score} total `);
+                            document.querySelector(".inter-round-modal").style.display = "flex";
+                            break;
+                        case "player_disconnected":
+                            renderTo(".inter-round-modal", `
+                            <h3>A fellow diplomat has been disconnected</h3>
+                            <p>Please hold while we re-establish order.</p>
+                            <h3>You may be assigned to a new negotiation cluster.</h3>
+                            <p>The United Nations appreciates your patience.</p>
+                            <img src="logo.svg"></img>
+                            <p>Next round begins in <span class="inter-round-countdown"></span></p>
+                            `)
+                            renderTo(".inter-round-countdown", 5);
+                            for (let i = 0; i < 4; i++) {
+                                reveal_timers.push(setTimeout(() => renderTo(".inter-round-countdown", 4 - i), 1000 * (i + 1)));
+                            }
+                            reveal_timers.push(setTimeout(() => document.querySelector(".inter-round-modal").style.display = "none", 5000));
+                            document.querySelector(".inter-round-modal").style.display = "flex";
+                            break;
+                        case "podium":
+                            let winners = data.player_scores.map((i, ii) => [room.players[ii], i, data.player_intel_scores[ii]]).sort((a, b) => b[1] + b[2] - a[1] - a[2]);
+                            renderTo(".podium", `
+                        <h3>Congratulations to<h3>
+                        <h2>The representative for ${winners[0][0]}<h2>
+                            <img src='flags/Flag_of_${winners[0][0].replace(/ /g, "_").replace("The", "the")}.svg'></img>
+                            <h4>For their outstanding diplomatic service to their country!</h4>
+                            <h3>Final Ranking</h3>
+                            <div>
+                                ${
+                                winners.map(i => `<p>${i[0]}:${i[1]}D + ${i[2]}I = ${i[1] + i[2]} total</p>`).join("")
+                                }
+                            </div>
+                            <h3> The UN summit 2021 has concluded. Thank you for your participation.</h3>
+                            `)
+                            switchPanel("screen", "podium")
+                            break;
+                    }
+                });
+                ws.addEventListener("close", () => {
+                    reveal_timers.forEach(i => clearTimeout(i));
+                    switchPanel("screen", "main");
+                    renderTo(".inter-round-modal", `
+                            <h3>Connection lost</h3>
+                            <p>Re-connection functionality has not been implemented yet.</p>
+                            <p>Please re-establish contact with the game host as soon as possible.</p>
+                            <img src="logo.svg"></img>
+                            `)
+                    document.querySelector(".inter-round-modal").style.display = "flex";
+                })
+            } catch (e) {
+                console.log("oh no");
+            }
+        }
+
+        function submitForApproval() {
+            if (ws) {
+                if (room.current_set == room.own_set) {
+                    ws.send(JSON.stringify({
+                        action: "submit_bill",
+                        bill: room.present_order
+                    }))
+                    switchPane("history")
+                } else {
+                    ws.send(JSON.stringify({
+                        action: "submit_ranking",
+                        bill: room.present_order
+                    }))
+                    renderTo(".submitbill", "Submission received");
+                    setTimeout(() => renderTo(".submitbill", "Submit ranking"), 1500);
+                }
+            }
+        }
+        function confirmBill() {
+            if (ws) {
+                ws.send(JSON.stringify({
+                    action: "confirm_bill",
+                    bill_id: room.current_bill_id
+                }))
+            }
+        }
+        function tryHostGame() {
+            try {
+                if (ws) ws.close();
+                ws = new WebSocket("ws://" + window.location.hostname + ":3320");
+                ws.onopen = () => {
+                    ws.send(JSON.stringify({
+                        action: "host_game",
+                    }));
+                }
+                ws.addEventListener("message", (data) => {
+                    data = JSON.parse(data.data);
+                    switch (data.state) {
+                        case "created_room":
+                            // take them to the waiting room
+                            renderTo("#gid_rep", data.uid);
+                            renderTo(".nation-name", "<p>You are the game host. (If you would like to play, please open a new window.)</p> <img src='logo.svg'>");
+                            document.querySelector(".wstart").disabled = false;
+                            document.querySelector(".wstart").innerText = "Press to start";
+                            switchPanel("screen", "waitingRoom");
+                            break;
+                        case "new_player":
+                            //add a new player
+                            let d = document.createElement("div");
+                            d.innerText = data.player_alias;
+                            document.querySelector(".player-list").appendChild(d);
+                            break;
+                        case "start_game":
+                            console.log("got start");
+                            Array.from(document.querySelectorAll(".player-list div")).forEach((i) => i.innerHTML = `${i.innerHTML}<button>Eject player</button>`);
+                            document.querySelector(".wstart").style.display = "none";
+                            break;
+                        case "player_disconnected":
+                            Array.from(document.querySelectorAll(".player-list button"))[data.player].parentElement.remove();
+                            break;
+                        case "action_ticker":
+
+                    }
+                })
+            } catch (e) {
+                console.log("oh no");
+                //rip
+            }
+        }
+        document.querySelector(".player-list").addEventListener("click", (e) => {
+            if (e.target.matches("button")) {
+                console.log("yeet");
+                //kick the player
+                let player_index = Array.from(document.querySelectorAll(".player-list button")).indexOf(e.target);
+                ws.send(JSON.stringify({
+                    action: "kick_player",
+                    player: player_index
+                }))
+            }
+        })
+        function hostStart() {
+            ws.send(JSON.stringify({
+                action: "start_game"
+            }))
+        }
+    </script>
+</body>
+
+</html>
