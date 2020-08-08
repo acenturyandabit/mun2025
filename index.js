@@ -156,6 +156,12 @@ wss.on('connection', function connection(ws) {
                         }));
                         return;
                     }
+                    if ("current_round" in active_games[data.room_id]) {
+                        ws.send(JSON.stringify({
+                            state: "game_begun"
+                        }));
+                        return;
+                    }
                     active_games[data.room_id].players.forEach(i => {
                         i.ws.send(JSON.stringify({
                             state: "new_player",
@@ -323,6 +329,8 @@ wss.on('connection', function connection(ws) {
                     currentRoom.players.forEach(i => {
                         i.ws.close();
                     })
+                    clearTimeout(currentRoom.prestartTimeout);
+                    clearTimeout(currentRoom.billExpiryTimeout);
                     return;
                 }
                 if ("current_round" in currentRoom) {

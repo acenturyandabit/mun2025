@@ -168,8 +168,10 @@
 
                     .arrange-order p {
                         user-select: none;
-                        margin: 0;
+                        margin: 3px;
                         padding: 10px;
+                        border-radius: 10px;
+                        background: blue;
                     }
 
                     body {
@@ -181,16 +183,14 @@
                         user-select: none;
                         display: none
                     }
+
+                    .bill_square {
+                        border: 1px solid white;
+                        border-radius: 10px;
+                        padding: 10px;
+                    }
                 </style>
-                <div>
-                    <p>1</p>
-                    <p>2</p>
-                    <p>3</p>
-                    <p>4</p>
-                    <p>5</p>
-                    <p>6</p>
-                </div>
-                <div class="proto-resolution-dragdrop">
+                <div class="proto-resolution-dragdrop bill_square">
                     <p>Resolution A</p>
                     <p>Resolution B</p>
                     <p>Resolution C</p>
@@ -355,6 +355,14 @@
                                 document.querySelector("#invalid_gid").classList.add("red_flashy");
                             }, 100)
                             break;
+                        case "game_begun":
+                            document.querySelector("#invalid_gid").innerText = "The game has already started";
+                            document.querySelector("#invalid_gid").style.display = "block";
+                            document.querySelector("#invalid_gid").classList.remove("red_flashy");
+                            setTimeout(() => {
+                                document.querySelector("#invalid_gid").classList.add("red_flashy");
+                            }, 100)
+                            break;
                         case "new_player":
                             //add a new player
                             let d = document.createElement("div");
@@ -435,6 +443,7 @@
                             let new_bill_score = data.bill.reduce((p, i, ii) => p + (room.private_resolutions.indexOf(i) >= ii && ii < 4), 0);
                             new_bill_score = `<p>Your score from this bill: ${new_bill_score}</p>`
                             new_bill_div.innerHTML = new_bill_rows + new_bill_score;
+                            new_bill_div.classList.add("bill_square")
                             if (room.current_set == room.own_set) document.querySelector(".billconf").disabled = false;
                             new_bill_div.dataset.billid = room.current_bill_id;
                             histlist.insertBefore(new_bill_div, histlist.children[0]);
