@@ -310,6 +310,9 @@ wss.on('connection', function connection(ws) {
                 //player submits own ranking
                 currentRoom.players[ws_data_obj.player_index].private_guess = data.guess;
                 break;
+            case "progress_ready":
+                
+                break;
             case "kick_player":
                 //eject the player
                 currentRoom.players[data.player].ws.close();

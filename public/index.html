@@ -18,6 +18,11 @@
             align-items: center;
         }
 
+        body,html{
+            padding: 0;
+            margin:0;
+        }
+
         * {
             font-family: Roboto, sans-serif;
             text-align: center;
@@ -99,12 +104,11 @@
                 align-items: center;
                 display: flex;
                 flex-direction: column;
-                width: 500px;
             }
 
             .player-list {
                 position: relative;
-                width: 50vw;
+                width: 100%;
             }
 
             .player-list button {
@@ -129,14 +133,12 @@
                 align-items: center;
                 display: flex;
                 flex-direction: column;
-                width: 500px;
             }
 
             [data-pane="action"] {
                 align-items: center;
                 display: flex;
                 flex-direction: column;
-                width: 500px;
             }
 
             .inter-round-modal {
@@ -166,7 +168,7 @@
                         padding-left: 10px;
                     }
 
-                    .arrange-order p {
+                    .bill_square p:not(.bill-score) {
                         user-select: none;
                         margin: 3px;
                         padding: 10px;
@@ -189,6 +191,22 @@
                         border-radius: 10px;
                         padding: 10px;
                     }
+
+                    .bill_square p {
+                        display: flex;
+                        align-items: center;
+                    }
+
+                    .bill_square p span:first-child {
+                        flex: 0 0 1em;
+                        margin-right: 10px;
+                        background: white;
+                        color: blue;
+                    }
+
+                    .bill_square p span {
+                        flex: 1 1 auto;
+                    }
                 </style>
                 <div class="proto-resolution-dragdrop bill_square">
                     <p>Resolution A</p>
@@ -201,7 +219,7 @@
             </div>
             <p class="proto-resolution-score-container">Your score from this ordering:<span
                     class="proto-resolution-score"></span></p>
-            <p>Drag to rearrange!</p>
+            <p>Drag blue proposals up and down to reorder, to maximise your score!</p>
             <button class="submitbill" onclick="submitForApproval()">Submit ranking</button>
         </div>
         <div data-pane="leaderboard">
@@ -226,6 +244,10 @@
                     flex: 0 1 100%;
                     overflow-y: auto;
                 }
+
+                .bill-score {
+                    text-align: center;
+                }
             </style>
             <button class="billconf" onclick="confirmBill()" disabled>Accept last proposed bill</button>
             <div class="history-list">
@@ -238,13 +260,32 @@
                     display: flex;
                     flex-direction: row;
                 }
+                .navigation button{
+                    width:50%;
+                }
+                .navigation {
+                    width: 100%;
+                }
+
+                .remaining-time {
+                    width: 100%;
+                    mix-blend-mode: exclusion;
+                }
+
+                .remaining-time-bar {
+                    height: 100%;
+                    position: absolute;
+                    left: 0;
+                    background: white;
+                }
             </style>
             <p>
                 <button style="display:none" data-switch-pane="action">Propse bill</button>
                 <button data-switch-pane="history">View proposals</button>
                 <button data-switch-pane="leaderboard">Leaderboard</button>
             </p>
-            <p>Time remaining: <span class="remaining-time"></span></p>
+            <p style="position: relative;"><span class="remaining-time-bar"></span><span class="remaining-time"></span>
+            </p>
         </div>
         <div class="inter-round-modal">
             <h3>Result:</h3>
@@ -409,7 +450,7 @@
                             }
                             //render bills in ABCD order
                             room.resolutions = data.resolutions;
-                            renderTo(".proto-resolution-dragdrop", data.resolutions.map((i, ii) => `<p>${String.fromCharCode("A".charCodeAt(0) + ii)}:${i}</p>`).join(" "))
+                            renderTo(".proto-resolution-dragdrop", data.resolutions.map((i, ii) => `<p><span>${String.fromCharCode("A".charCodeAt(0) + ii)}</span><span>${i}</span></p>`).join(" "))
                             switchPanel("screen", "main");
                             switchPane("action");
                             //nerf historical bills
@@ -426,8 +467,11 @@
                                     room.sec_remaining = 59;
                                     room.min_remaining--;
                                 }
-                                renderTo(".remaining-time", `${room.min_remaining}:${room.sec_remaining >= 10 ? "" : "0"}${room.sec_remaining}`);
+                                document.querySelector(".remaining-time-bar").style.width = ((room.sec_remaining + room.min_remaining * 60) / 180 * 100) + "%"
+                                renderTo(".remaining-time", `Time remaining: ${room.min_remaining}:${room.sec_remaining >= 10 ? "" : "0"}${room.sec_remaining}`);
                             }, 1000);
+                            document.querySelector(".remaining-time-bar").style.width = "100%"
+                            renderTo(".remaining-time", `Time remaining: 3:00`);
                             //leaderboard
                             renderTo(".inner-leaderboard", `
                             ${data.all_scores.map((i, ii) => [room.players[ii], i]).sort((a, b) => b[1] - a[1]).map(i => `<p>${i[0]}:${i[1]}</p>`).join("")}
@@ -439,9 +483,10 @@
                             let histlist = document.querySelector(".history-list")
                             if (histlist.querySelector("h1")) document.querySelector(".history-list h1").remove();
                             let new_bill_div = document.createElement("div");
-                            let new_bill_rows = data.bill.map((i, ii) => `<p>${String.fromCharCode("A".charCodeAt(0) + i)}:${room.resolutions[i]}</p>`).join(" ");
-                            let new_bill_score = data.bill.reduce((p, i, ii) => p + (room.private_resolutions.indexOf(i) >= ii && ii < 4), 0);
-                            new_bill_score = `<p>Your score from this bill: ${new_bill_score}</p>`
+                            new_bill_div.classList.add("bill_square");
+                            let new_bill_rows = data.bill.map((i, ii) => `<p><span>${String.fromCharCode("A".charCodeAt(0) + i)}</span><span>${room.resolutions[i]}</span></p>`).join(" ");
+                            let new_bill_score = data.bill.reduce((p, i, ii) => p + (room.private_resolutions.indexOf(i) <= ii && ii < 4), 0);
+                            new_bill_score = `<p class="bill-score">Your score from this bill: ${new_bill_score}</p>`
                             new_bill_div.innerHTML = new_bill_rows + new_bill_score;
                             new_bill_div.classList.add("bill_square")
                             if (room.current_set == room.own_set) document.querySelector(".billconf").disabled = false;
