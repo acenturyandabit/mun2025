@@ -5,7 +5,7 @@ var app = express();
 app.use(express.static("public"));
 app.listen(8031);
 const wss = new WebSocket.Server({ port: 3320 });
-//push test
+//push test.
 Array.prototype.shuffled = function () {
     return this.map(function (n) { return [Math.random(), n] })
         .sort().map(function (n) { return n[1] });
