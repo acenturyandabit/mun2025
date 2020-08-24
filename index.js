@@ -26,20 +26,7 @@ let active_games = {
     */
 };
 
-let round_clustering = [
-    [1],// for testing
-    [2],// for testing
-    [3],// for testing
-    [4],// for testing
-    [2, 3],// for testing
-    [3, 3],
-    [3, 4],
-    [4, 4],
-    [3, 3, 3],
-    [3, 3, 4],
-    [3, 4, 4]
-];
-
+const rounds_per_set=5;
 
 function guid(count = 6) {
     let pool = "1234567890qwertyuiopasdfghjklzxcvbnm";
@@ -54,7 +41,7 @@ function progressRoom(currentRoom, first) {
         currentRoom.current_set = 0;
         currentRoom.current_round = 0;
         currentRoom.players.forEach(i => i.score = 0);
-    } else if (currentRoom.current_round == 4 * currentRoom.player_sets.length - 1) {
+    } else if (currentRoom.current_round == rounds_per_set * currentRoom.player_sets.length - 1) {
         for (let i of currentRoom.players) {
             i.ws.send(JSON.stringify({
                 state: "podium",
@@ -62,6 +49,12 @@ function progressRoom(currentRoom, first) {
                 player_intel_scores: currentRoom.players.map(i => i.intel_score)
             }))
         }
+        currentRoom.host.send({
+            state:"podium",
+            player_scores: currentRoom.players.map(i => i.score),
+            player_intel_scores: currentRoom.players.map(i => i.intel_score)
+        })
+        currentRoom.concluded=true;
         return;
     } else {
         currentRoom.current_set++;
@@ -70,8 +63,7 @@ function progressRoom(currentRoom, first) {
         console.log(currentRoom.player_sets);
         currentRoom.current_round++;
     }
-    currentRoom.bill_count = 0; // serves as ID for bills
-    currentRoom.bill_agreements = 0;
+    currentRoom.player_bill_submissions = currentRoom.players.map(i => { });
 
     currentRoom.resolutions = lore.resolutions.sample(6);
     // hand out a random priority to everyone
@@ -97,7 +89,7 @@ function progressRoom(currentRoom, first) {
             i.ws.send(JSON.stringify({
                 state: "begin_round",
                 current_round: currentRoom.current_round,
-                total_rounds: currentRoom.player_sets.length * 4,
+                total_rounds: currentRoom.player_sets.length * rounds_per_set,
                 current_set: currentRoom.current_set,
                 own_set: i.set,
                 set_count: currentRoom.player_sets[i.set].length,
@@ -105,7 +97,8 @@ function progressRoom(currentRoom, first) {
                 resolutions: currentRoom.resolutions,
                 private_resolutions: i.private_resolutions,
                 tracking_target: i.tracking_target,
-                all_scores: currentRoom.players.map(i => i.score)
+                all_scores: currentRoom.players.map(i => i.score),
+                player_aliases: currentRoom.player_order.slice(0, currentRoom.players.length)
             }))
         }
     }, 5000);
@@ -138,7 +131,7 @@ function progressRoom(currentRoom, first) {
             }))
         }
         progressRoom(currentRoom);
-    }, (3 * 60 + 5) * 1000);
+    }, (5 * 60 + 5) * 1000);
 }
 
 wss.on('connection', function connection(ws) {
@@ -211,14 +204,8 @@ wss.on('connection', function connection(ws) {
                 //set up the rounds as per the players
                 //shuffle players to get clustering
                 let alt_order = currentRoom.players.map((i, ii) => ii).shuffled();
-                currentRoom.player_sets = round_clustering[currentRoom.players.length - 1].map((i, ii) => {
-                    let subset = alt_order.splice(0, i);
-                    for (let i of subset) {
-                        currentRoom.players[i].set = ii;
-                    }
-                    return subset;
-                });
-
+                currentRoom.player_sets = [alt_order];
+                currentRoom.players.forEach(i => i.set = 0);
                 for (let i of currentRoom.players) {
                     i.ws.send(JSON.stringify({
                         state: "start_game",
@@ -238,43 +225,42 @@ wss.on('connection', function connection(ws) {
 
             case "submit_bill":
                 //broadcast the bill to everyone
-                currentRoom.bill_count++;
+                currentRoom.player_bill_submissions[ws_data_obj.player_index] = {
+                    bill: data.bill,
+                    votes: {}
+                };
+                currentRoom.player_bill_submissions[ws_data_obj.player_index].votes[ws_data_obj.player_index] = true;
                 currentRoom.bill_agreements = 0;
                 currentRoom.last_bill = data.bill;
                 for (let i of currentRoom.players) {
                     i.ws.send(JSON.stringify({
                         state: "bill_post",
-                        bill_id: currentRoom.bill_count,
-                        bill: data.bill
+                        bill: data.bill,
+                        proposing_country: ws_data_obj.player_index,
+                        bill_pass_count: Object.entries(currentRoom.player_bill_submissions[ws_data_obj.player_index].votes).length
                     }));
                 }
                 break;
             case "confirm_bill":
                 //broadcast the bill confirmation to everyone
-                if (data.bill_id == currentRoom.bill_count) {
-                    currentRoom.bill_agreements++;
-                    for (let i of currentRoom.players) {
-                        i.ws.send(JSON.stringify({
-                            state: "bill_confirmed",
-                            bill_id: currentRoom.bill_count,
-                            player_index: ws_data_obj.player_index
-                        }));
-                    }
-                } else {
-                    ws.send({
-                        state: "bill_expired"
-                    });
+                currentRoom.player_bill_submissions[data.bill_id].votes[ws_data_obj.player_index] = true;
+                for (let i of currentRoom.players) {
+                    i.ws.send(JSON.stringify({
+                        state: "bill_confirmed",
+                        bill_id: data.bill_id,
+                        bill_pass_count: Object.entries(currentRoom.player_bill_submissions[data.bill_id].votes).length,
+                        player_index: ws_data_obj.player_index
+                    }));
                 }
-                if (currentRoom.bill_agreements == currentRoom.player_sets[currentRoom.current_set].length) {
+                if (Object.entries(currentRoom.player_bill_submissions[data.bill_id].votes).length == currentRoom.player_sets[currentRoom.current_set].length) {
                     //all bills passed, calculate score and move on
                     clearTimeout(currentRoom.billExpiryTimeout);
-                    console.log(currentRoom.last_bill);
+
                     currentRoom.players.forEach((player, ii) => {
                         if (currentRoom.player_sets[currentRoom.current_set].indexOf(ii) != -1) {
                             player.score += currentRoom.last_bill.reduce((p, i, ii) => {
                                 if (player.private_resolutions.indexOf(i) >= ii && player.private_resolutions.indexOf(i) <= 3) {
                                     p++;
-                                    console.log("yes, bc");
                                 }
                                 console.log(`${i} was ${player.private_resolutions.indexOf(i)} vs ${ii}`)
                                 return p;
@@ -294,12 +280,9 @@ wss.on('connection', function connection(ws) {
                         i.ws.send(JSON.stringify({
                             state: "bill_passed",
                             score: i.score,
-                            bill: currentRoom.last_bill,
-                            intel_score: i.intel_score
+                            bill: currentRoom.last_bill
                         }))
                     }
-                    console.log("conf received");
-                    console.log(currentRoom.players.map(i => i.score));
                     progressRoom(currentRoom);
                 }
                 // if all bills exist, cry.
@@ -311,7 +294,7 @@ wss.on('connection', function connection(ws) {
                 currentRoom.players[ws_data_obj.player_index].private_guess = data.guess;
                 break;
             case "progress_ready":
-                
+
                 break;
             case "kick_player":
                 //eject the player
@@ -355,21 +338,14 @@ wss.on('connection', function connection(ws) {
                         state: "player_disconnected",
                         player: ws_data_obj.player_index
                     }))
-                    let alt_order = currentRoom.players.map((i, ii) => ii).shuffled();
-                    console.log(round_clustering[currentRoom.players.length - 1]);
-                    console.log(currentRoom.players.length - 1)
-                    currentRoom.player_sets = round_clustering[currentRoom.players.length - 1].map((i, ii) => {
-                        let subset = alt_order.splice(0, i);
-                        for (let i of subset) {
-                            currentRoom.players[i].set = ii;
-                        }
-                        return subset;
-                    });
+                    currentRoom.player_sets = [currentRoom.players.map((i, ii) => ii)];
                     clearTimeout(currentRoom.prestartTimeout);
                     clearTimeout(currentRoom.billExpiryTimeout);
                     currentRoom.current_set = 0;
                     progressRoom(currentRoom);
-                } else {
+                } else if ("concluded" in currentRoom){
+                    //lol do nothing, no need
+                }else{
                     currentRoom.players.splice(ws_data_obj.player_index, 1);
                     currentRoom.player_order.splice(ws_data_obj.player_index, 1);
                     //resend waiting room for all players

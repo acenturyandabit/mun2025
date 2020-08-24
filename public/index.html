@@ -1,7 +1,6 @@
 <html>
 
 <head>
-    <script src='https://cdnjs.cloudflare.com/ajax/libs/dragula/3.7.2/dragula.min.js'></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto@1&display=swap" rel="stylesheet">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Model UN 2021</title>
@@ -18,9 +17,10 @@
             align-items: center;
         }
 
-        body,html{
+        body,
+        html {
             padding: 0;
-            margin:0;
+            margin: 0;
         }
 
         * {
@@ -180,6 +180,11 @@
                         position: relative;
                     }
 
+                    /*.bill_square p:hover {
+                        background: lightblue;
+                        color: blue;
+                    }*/
+
                     .gu-mirror {
                         position: absolute;
                         user-select: none;
@@ -195,6 +200,7 @@
                     .bill_square p {
                         display: flex;
                         align-items: center;
+                        width: calc(100% - 20px);
                     }
 
                     .bill_square p span:first-child {
@@ -207,14 +213,24 @@
                     .bill_square p span {
                         flex: 1 1 auto;
                     }
+
+                    .outer-proto-container {
+                        position: relative;
+                    }
+
+                    .emplace-above {
+                        border-top: 5px solid blueviolet;
+                    }
                 </style>
-                <div class="proto-resolution-dragdrop bill_square">
-                    <p>Resolution A</p>
-                    <p>Resolution B</p>
-                    <p>Resolution C</p>
-                    <p>Resolution F</p>
-                    <p>Resolution D</p>
-                    <p>Resolution E</p>
+                <div class="outer-proto-container">
+                    <div class="proto-resolution-dragdrop bill_square">
+                        <p>Resolution A</p>
+                        <p>Resolution B</p>
+                        <p>Resolution C</p>
+                        <p>Resolution F</p>
+                        <p>Resolution D</p>
+                        <p>Resolution E</p>
+                    </div>
                 </div>
             </div>
             <p class="proto-resolution-score-container">Your score from this ordering:<span
@@ -223,37 +239,44 @@
             <p>When ready, press "Submit ranking" below to submit your bill for others to approve.</p>
             <button class="submitbill" onclick="submitForApproval()">Submit ranking</button>
         </div>
-        <div data-pane="leaderboard">
-            <style>
-                [data-pane='leaderboard'] {
-                    flex-direction: column;
-                }
-            </style>
-            <h2>Only diplomacy scores are shown here; intelligence scores are private.</h2>
-            <div class="inner-leaderboard">
-
-            </div>
-        </div>
         <div data-pane="history">
             <style>
                 [data-pane="history"] {
                     flex-direction: column;
-                    height: 50vh;
                 }
 
                 .history-list {
-                    flex: 0 1 100%;
+                    flex: 1 0 50vh;
                     overflow-y: auto;
                 }
 
                 .bill-score {
                     text-align: center;
                 }
+
+                .proposalRow {
+                    border: 1px solid white;
+                    border-radius: 10px;
+                    padding: 3px 0px;
+                    margin: 3px 0px;
+                }
+
+                .proposalBin span {
+                    background: white;
+                    color: blue;
+                    border-radius: 3px;
+                    padding: 3px;
+                    margin: 1px;
+                }
+
+                button.accepted_this {
+                    background: green;
+                    color: white;
+                }
             </style>
-            <button class="billconf" onclick="confirmBill()" disabled>Accept last proposed bill</button>
             <div class="history-list">
             </div>
-            <p>Scroll down to view past bills from this round.</p>
+            <p>Scroll down to view others' proposed bills from this round.</p>
             <p>You can only approve the latest bill - click "Propose bill" to propose a new bill.</p>
         </div>
         <div class="navigation">
@@ -262,9 +285,11 @@
                     display: flex;
                     flex-direction: row;
                 }
-                .navigation button{
-                    width:50%;
+
+                .navigation button {
+                    flex: 1 1 300px;
                 }
+
                 .navigation {
                     width: 100%;
                 }
@@ -284,7 +309,6 @@
             <p>
                 <button style="display:none" data-switch-pane="action">Propse bill</button>
                 <button data-switch-pane="history">View proposals</button>
-                <button data-switch-pane="leaderboard">Leaderboard</button>
             </p>
             <p style="position: relative;"><span class="remaining-time-bar"></span><span class="remaining-time"></span>
             </p>
@@ -317,19 +341,93 @@
         let reveal_timers = [];
 
         let room = {};
-        let drake = dragula([document.querySelector(".proto-resolution-dragdrop")], {
-            revertOnSpill: true
-        });
-        drake.on("dragend", (e) => {
-            //calculate the score if in diplomacy mode
-            room.present_order = Array.from(document.querySelectorAll(".proto-resolution-dragdrop p")).map(i => i.innerText[0].charCodeAt(0) - "A".charCodeAt(0));
-            if (room.current_set == room.own_set) {
-                let protoScore = room.present_order.reduce((p, i, ii) => p + (room.private_resolutions.indexOf(i) >= ii && room.private_resolutions.indexOf(i) < 4), 0);
-                renderTo(".proto-resolution-score", protoScore);
+        let dragManagedItem;
+        let handleDragStart = (e) => {
+            let directChildren = Array.from(document.querySelector(".proto-resolution-dragdrop").children);
+            for (let i of e.composedPath()) {
+                if (directChildren.includes(i)) {
+                    dragManagedItem = i;
+                    break;
+                }
             }
+            if (!dragManagedItem) return;
+            dragManagedItem.style.position = "absolute";
+            let yy = e.clientY;
+            if (!yy) yy = e.touches[0].clientY;
+            dragManagedItem.style.top = (yy - dragManagedItem.parentElement.getClientRects()[0].y - 20) + "px";
+        }
 
-            //highlight 'correct' elements
-        })
+        let handleDragMove = (e) => {
+            if (dragManagedItem) {
+                let hoverOverItem;
+                let directChildren = Array.from(document.querySelector(".proto-resolution-dragdrop").children);
+                directChildren.forEach(i => i.classList.remove("emplace-above"));
+                if (e.touches) {
+                    let yy = e.changedTouches[0].clientY;
+                    for (let i of directChildren) {
+                        let clr = i.getClientRects()[0];
+                        if (clr.y < yy && clr.y + clr.height > yy) {
+                            hoverOverItem = i;
+                            break;
+                        }
+                    }
+                } else {
+                    for (let i of e.composedPath()) {
+                        if (directChildren.includes(i) && i != dragManagedItem) {
+                            hoverOverItem = i;
+                            break;
+                        }
+                    }
+                }
+                if (hoverOverItem) hoverOverItem.classList.add("emplace-above");
+                let yy = e.clientY;
+                if (!yy) yy = e.touches[0].clientY;
+                dragManagedItem.style.top = (yy - dragManagedItem.parentElement.getClientRects()[0].y) + "px";
+            }
+        }
+        let handleDragEnd = (e) => {
+            if (dragManagedItem) {
+                let hoverOverItem;
+                let directChildren = Array.from(document.querySelector(".proto-resolution-dragdrop").children);
+                directChildren.forEach(i => i.classList.remove("emplace-above"));
+                if (e.touches) {
+                    let yy = e.changedTouches[0].clientY;
+                    for (let i of directChildren) {
+                        let clr = i.getClientRects()[0];
+                        if (clr.y < yy && clr.y + clr.height > yy) {
+                            hoverOverItem = i;
+                            break;
+                        }
+                    }
+                } else {
+                    for (let i of e.composedPath()) {
+                        if (directChildren.includes(i) && i != dragManagedItem) {
+                            hoverOverItem = i;
+                            break;
+                        }
+                    }
+                }
+                if (hoverOverItem) {
+                    //put it back where it belongs
+                    hoverOverItem.parentElement.insertBefore(dragManagedItem, hoverOverItem);
+                }
+                dragManagedItem.style.position = "static";
+                dragManagedItem = undefined;
+                room.present_order = Array.from(document.querySelectorAll(".proto-resolution-dragdrop p")).map(i => i.innerText[0].charCodeAt(0) - "A".charCodeAt(0));
+                if (room.current_set == room.own_set) {
+                    let protoScore = room.present_order.reduce((p, i, ii) => p + (room.private_resolutions.indexOf(i) >= ii && room.private_resolutions.indexOf(i) < 4), 0);
+                    renderTo(".proto-resolution-score", protoScore);
+                }
+            }
+        }
+        [[handleDragStart, "touchstart", "mousedown"],
+        [handleDragMove, "touchmove", "mousemove"],
+        [handleDragEnd, "touchend", "mouseup"],
+        ].forEach(i => {
+            i.slice(1).forEach((en) => {
+                document.querySelector(".proto-resolution-dragdrop").addEventListener(en, i[0]);
+            })
+        });
         document.querySelector("#gid").addEventListener("keydown", (e) => {
             if (e.key == "Enter") tryEnterGame();
         })
@@ -352,6 +450,15 @@
         })
         let ws;
         function tryEnterGame() {
+            if (!document.querySelector("#gid").value) {
+                document.querySelector("#invalid_gid").innerText = "Please enter room name";
+                document.querySelector("#invalid_gid").style.display = "block";
+                document.querySelector("#invalid_gid").classList.remove("red_flashy");
+                setTimeout(() => {
+                    document.querySelector("#invalid_gid").classList.add("red_flashy");
+                }, 100);
+                return;
+            }
             try {
                 if (ws) ws.close();
                 ws = new WebSocket("ws://" + window.location.hostname + ":3320");
@@ -377,7 +484,7 @@
                             renderTo(".nation-name", `
                             <p>You are the diplomat for</p>
                             <h2>${data.player_alias}</h2>
-                            <img src='flags/Flag_of_${data.player_alias.replace(/ /g, "_").replace("The", "the")}.svg'></img>
+                            <img src='flags/Flag_of_${data.player_alias.replace(/ /g, "_").replace("The", "the").replace(/'/g, "_")}.svg'></img>
                             `);
                             room.player_alias = data.player_alias;
                             switchPanel("screen", "waitingRoom");
@@ -436,31 +543,31 @@
                             room.own_set = data.own_set;
                             room.private_resolutions = data.private_resolutions;
                             room.present_order = data.resolutions.map((i, ii) => ii);
-                            if (data.current_set == data.own_set) {
-                                renderTo(".current-mode", "Diplomacy mode");
-                                renderTo(".instruction", "Prioritise bills " + data.private_resolutions.slice(0, 4).map((i, ii) => `${ii + 1}.${String.fromCharCode("A".charCodeAt(0) + i)}`).join(",") + "; failure = " + ((data.bill_penalty > 0) ? "+" + data.bill_penalty : data.bill_penalty));
-                                let protoScore = room.present_order.reduce((p, i, ii) => p + (room.private_resolutions.indexOf(i) >= ii && room.private_resolutions.indexOf(i) < 4), 0);
-                                document.querySelector(".proto-resolution-score-container").style.display = "block";
-                                renderTo(".proto-resolution-score", protoScore);
-                                renderTo(".billconf", "Accept last bill");
-                            } else {
-                                renderTo(".current-mode", "Intelligence mode");
-                                console.log(data.tracking_target);
-                                renderTo(".instruction", "Identify the ranking of " + room.players[data.tracking_target]);
-                                document.querySelector(".proto-resolution-score-container").style.display = "none";
-                                renderTo(".billconf", "You cannot vote in intelligence mode");
-                            }
+                            renderTo(".current-mode", "Diplomacy mode");
+                            renderTo(".instruction", "Prioritise bills " + data.private_resolutions.slice(0, 4).map((i, ii) => `${ii + 1}.${String.fromCharCode("A".charCodeAt(0) + i)}`).join(",") + "; failure = " + ((data.bill_penalty > 0) ? "+" + data.bill_penalty : data.bill_penalty));
+                            let protoScore = room.present_order.reduce((p, i, ii) => p + (room.private_resolutions.indexOf(i) >= ii && room.private_resolutions.indexOf(i) < 4), 0);
+                            document.querySelector(".proto-resolution-score-container").style.display = "block";
+                            renderTo(".proto-resolution-score", protoScore);
                             //render bills in ABCD order
                             room.resolutions = data.resolutions;
                             renderTo(".proto-resolution-dragdrop", data.resolutions.map((i, ii) => `<p><span>${String.fromCharCode("A".charCodeAt(0) + ii)}</span><span>${i}</span></p>`).join(" "))
                             switchPanel("screen", "main");
                             switchPane("action");
-                            //nerf historical bills
+                            room.player_aliases = data.player_aliases;
                             renderTo(".history-list", `
-                                <h1>No bills submitted yet</h1>
+                                ${data.player_aliases.map((i, ii) =>
+                                `
+                                    <div class="proposalRow">
+                                        <p>${i} (Current score: ${data.all_scores[ii]})</p>
+                                        <div class="proposalBin">
+                                            <p>Proposal pending...</p>
+                                        </div>
+                                        <p class="proposal_score">Proposal score pending...</p>
+                                        <button disabled onclick="confirmBill(${ii})">Accept (0/${room.player_aliases.length} countries accepted)</button>
+                                    </div>
+                                    `).join("")}
                             `)
-                            document.querySelector(".billconf").disabled = true;
-                            room.min_remaining = 3;
+                            room.min_remaining = 5;
                             room.sec_remaining = 0;
                             renderTo(".remaining-time", `${room.min_remaining}:${room.sec_remaining > 10 ? "" : "0"}${room.sec_remaining}`);
                             room.remaining_ticker = setInterval(() => {
@@ -469,39 +576,33 @@
                                     room.sec_remaining = 59;
                                     room.min_remaining--;
                                 }
-                                document.querySelector(".remaining-time-bar").style.width = ((room.sec_remaining + room.min_remaining * 60) / 180 * 100) + "%"
+                                document.querySelector(".remaining-time-bar").style.width = ((room.sec_remaining + room.min_remaining * 60) / 300 * 100) + "%"
                                 renderTo(".remaining-time", `Time remaining: ${room.min_remaining}:${room.sec_remaining >= 10 ? "" : "0"}${room.sec_remaining}`);
                             }, 1000);
                             document.querySelector(".remaining-time-bar").style.width = "100%"
                             renderTo(".remaining-time", `Time remaining: 3:00`);
-                            //leaderboard
-                            renderTo(".inner-leaderboard", `
-                            ${data.all_scores.map((i, ii) => [room.players[ii], i]).sort((a, b) => b[1] - a[1]).map(i => `<p>${i[0]}:${i[1]}</p>`).join("")}
-                            `);
                             break;
                         case "bill_post":
-                            room.current_bill_id = data.bill_id;
                             //render the bill
-                            let histlist = document.querySelector(".history-list")
-                            if (histlist.querySelector("h1")) document.querySelector(".history-list h1").remove();
-                            let new_bill_div = document.createElement("div");
-                            new_bill_div.classList.add("bill_square");
-                            let new_bill_rows = data.bill.map((i, ii) => `<p><span>${String.fromCharCode("A".charCodeAt(0) + i)}</span><span>${room.resolutions[i]}</span></p>`).join(" ");
-                            let new_bill_score = data.bill.reduce((p, i, ii) => p + (room.private_resolutions.indexOf(i) <= ii && ii < 4), 0);
-                            new_bill_score = `<p class="bill-score">Your score from this bill: ${new_bill_score}</p>`
-                            new_bill_div.innerHTML = new_bill_rows + new_bill_score;
-                            new_bill_div.classList.add("bill_square")
-                            if (room.current_set == room.own_set) document.querySelector(".billconf").disabled = false;
-                            new_bill_div.dataset.billid = room.current_bill_id;
-                            histlist.insertBefore(new_bill_div, histlist.children[0]);
+                            let hibox = document.querySelector(`.history-list .proposalRow:nth-child(${data.proposing_country + 1})`);
+                            hibox.querySelector(".proposalBin").innerHTML = `
+                                ${data.bill.map((i => `<span>${String.fromCharCode("A".charCodeAt(0) + i)}</span>`)).join("")}
+                            `;
+                            let new_bill_score = data.bill.reduce((p, i, ii) => p + (room.private_resolutions.indexOf(i) >= ii && room.private_resolutions.indexOf(i) < 4), 0);
+                            hibox.querySelector(".proposal_score").innerHTML = `Your score from this bill: ${new_bill_score}`;
+                            if (room.player_aliases[data.proposing_country] != room.player_alias) {
+                                hibox.querySelector("button").disabled = false; // cannot accept your own
+                                hibox.querySelector("button").classList.remove("accepted_this");
+                                hibox.querySelector("button").innerHTML = `Accept (1/${room.player_aliases.length} countries accepted)`;
+                            }
+                            else {
+                                hibox.querySelector("button").classList.add("accepted_this");
+                                hibox.querySelector("button").innerHTML = `Accepted. (1/${room.player_aliases.length} countries accepted)`;
+                            }
                             break;
                         case "bill_confirmed":
-                            function decorate_bill() {
-                                let approvalSticker = document.createElement("div");
-                                approvalSticker.innerHTML = `<p>Approved by:${room.players[data.player_index]}</p>`
-                                document.querySelector(`[data-billid="${data.bill_id}"]`).appendChild(approvalSticker);
-                            }
-                            decorate_bill();
+                            let accbox = document.querySelector(`.history-list  .proposalRow:nth-child(${data.bill_id + 1})`);
+                            accbox.querySelector("button").innerHTML = `Accept${accbox.querySelector("button").disabled ? "ed" : ""} (${data.bill_pass_count}/${room.player_aliases.length} countries accepted)`;
                             break;
                         case "bill_failed":
                             renderTo(".inter-round-modal", `
@@ -514,11 +615,11 @@
             <p>Next round begins in <span class="inter-round-countdown"></span></p>
                             `)
                             //say bill failed   
-                            renderTo(".roundresult", "Bill Rejected :(")
+                            renderTo(".roundresult", "No bill passed :(")
                             clearTimeout(room.remaining_ticker);
                             //update score
                             document.querySelector(".accepted-bill-container").style.display = "none";
-                            renderTo(".playerscore", `${data.score} diplomacy / ${data.intel_score} intelligence = ${data.score + data.intel_score} total `);
+                            renderTo(".playerscore", `${data.score}`);
 
                             renderTo(".inter-round-countdown", 5);
                             for (let i = 0; i < 4; i++) {
@@ -551,7 +652,7 @@
                             }
                             reveal_timers.push(setTimeout(() => document.querySelector(".inter-round-modal").style.display = "none", 5000));
 
-                            renderTo(".playerscore", `${data.score} diplomacy / ${data.intel_score} intelligence = ${data.score + data.intel_score} total `);
+                            renderTo(".playerscore", `${data.score}`);
                             document.querySelector(".inter-round-modal").style.display = "flex";
                             break;
                         case "player_disconnected":
@@ -571,7 +672,7 @@
                             document.querySelector(".inter-round-modal").style.display = "flex";
                             break;
                         case "podium":
-                            let winners = data.player_scores.map((i, ii) => [room.players[ii], i, data.player_intel_scores[ii]]).sort((a, b) => b[1] + b[2] - a[1] - a[2]);
+                            let winners = data.player_scores.map((i, ii) => [room.players[ii], i]).sort((a, b) => b[1] - a[1]);
                             renderTo(".podium", `
                         <h3>Congratulations to<h3>
                         <h2>The representative for ${winners[0][0]}<h2>
@@ -580,7 +681,7 @@
                             <h3>Final Ranking</h3>
                             <div>
                                 ${
-                                winners.map(i => `<p>${i[0]}:${i[1]}D + ${i[2]}I = ${i[1] + i[2]} total</p>`).join("")
+                                winners.map(i => `<p>${i[0]}:${i[1]}</p>`).join("")
                                 }
                             </div>
                             <h3> The UN summit 2021 has concluded. Thank you for your participation.</h3>
@@ -623,12 +724,16 @@
                 }
             }
         }
-        function confirmBill() {
+        function confirmBill(i) {
             if (ws) {
                 ws.send(JSON.stringify({
                     action: "confirm_bill",
-                    bill_id: room.current_bill_id
+                    bill_id: i
                 }))
+                let thebutton = document.querySelector(`.history-list .proposalRow:nth-child(${i + 1}) button`);
+                thebutton.innerText = thebutton.innerText.replace("Accept", "Accepted");
+                thebutton.classList.add("accepted_this");
+                thebutton.disabled = true;
             }
         }
         function tryHostGame() {
@@ -664,10 +769,18 @@
                             document.querySelector(".wstart").style.display = "none";
                             break;
                         case "player_disconnected":
-                            Array.from(document.querySelectorAll(".player-list div"))[data.player].remove();
+                            let player_kick_button = Array.from(document.querySelectorAll(".player-list div"))[data.player].querySelector("button");
+                            player_kick_button.innerHTML = "DISCONNECTED";
+                            player_kick_button.disabled = true;
                             break;
-                        case "action_ticker":
-
+                        case "podium":
+                            renderTo(".inter-round-modal", `
+                            <img src="logo.svg"></img>
+                            <h3>The game has concluded.</h3>
+                            <p>Thanks for playing!</p>
+                            `);
+                            document.querySelector(".inter-round-modal").style.display = "flex";
+                            break;
                     }
                 })
             } catch (e) {
