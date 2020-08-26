@@ -564,6 +564,9 @@
                                         </div>
                                         <p class="proposal_score">Proposal score pending...</p>
                                         <button disabled onclick="confirmBill(${ii})">Accept (0/${room.player_aliases.length} countries accepted)</button>
+                                        <div class="acceptee">
+                                            
+                                        </div>
                                     </div>
                                     `).join("")}
                             `)
@@ -589,20 +592,25 @@
                                 ${data.bill.map((i => `<span>${String.fromCharCode("A".charCodeAt(0) + i)}</span>`)).join("")}
                             `;
                             let new_bill_score = data.bill.reduce((p, i, ii) => p + (room.private_resolutions.indexOf(i) >= ii && room.private_resolutions.indexOf(i) < 4), 0);
-                            hibox.querySelector(".proposal_score").innerHTML = `Your score from this bill: ${new_bill_score}`;
+                            hibox.querySelector(".proposal_score").innerHTML = `Your score if this passes: ${new_bill_score}`;
                             if (room.player_aliases[data.proposing_country] != room.player_alias) {
-                                hibox.querySelector("button").disabled = false; // cannot accept your own
+                                hibox.querySelector("button").disabled = false; // cannot unaccept your own
                                 hibox.querySelector("button").classList.remove("accepted_this");
                                 hibox.querySelector("button").innerHTML = `Accept (1/${room.player_aliases.length} countries accepted)`;
+                                hibox.querySelector("div.acceptee").innerHTML = `<p>Bill accepted by ${room.player_aliases[data.proposing_country]}</p>`;
                             }
                             else {
                                 hibox.querySelector("button").classList.add("accepted_this");
-                                hibox.querySelector("button").innerHTML = `Accepted. (1/${room.player_aliases.length} countries accepted)`;
+                                hibox.querySelector("button").innerHTML = `Accepted (1/${room.player_aliases.length} countries accepted)`;
+                                hibox.querySelector("div.acceptee").innerHTML = `<p>Bill accepted by ${room.player_alias}</p>`;
                             }
+
                             break;
                         case "bill_confirmed":
                             let accbox = document.querySelector(`.history-list  .proposalRow:nth-child(${data.bill_id + 1})`);
-                            accbox.querySelector("button").innerHTML = `Accept${accbox.querySelector("button").disabled ? "ed" : ""} (${data.bill_pass_count}/${room.player_aliases.length} countries accepted)`;
+                            accbox.querySelector("button").innerHTML = `Accept${accbox.querySelector("button").classList.contains("accepted_this") ? "ed" : ""} (${Object.entries(data.bill_passees).length}/${room.player_aliases.length} countries accepted)`;
+                            let accdiv = document.querySelector(`.history-list  .proposalRow:nth-child(${data.bill_id + 1}) div.acceptee`);
+                            accdiv.innerHTML = Object.keys(data.bill_passees).map(i => `<p>Bill accepted by ${room.player_aliases[i]}</p>`).join("\n");
                             break;
                         case "bill_failed":
                             renderTo(".inter-round-modal", `
@@ -726,14 +734,22 @@
         }
         function confirmBill(i) {
             if (ws) {
-                ws.send(JSON.stringify({
-                    action: "confirm_bill",
-                    bill_id: i
-                }))
                 let thebutton = document.querySelector(`.history-list .proposalRow:nth-child(${i + 1}) button`);
-                thebutton.innerText = thebutton.innerText.replace("Accept", "Accepted");
-                thebutton.classList.add("accepted_this");
-                thebutton.disabled = true;
+                if (thebutton.classList.contains("accepted_this")) {
+                    thebutton.classList.remove("accepted_this");
+                    thebutton.innerText = thebutton.innerText.replace("Accepted", "Accept");
+                    ws.send(JSON.stringify({
+                        action: "unconfirm_bill",
+                        bill_id: i
+                    }))
+                } else {
+                    thebutton.innerText = thebutton.innerText.replace("Accept", "Accepted");
+                    thebutton.classList.add("accepted_this");
+                    ws.send(JSON.stringify({
+                        action: "confirm_bill",
+                        bill_id: i
+                    }))
+                }
             }
         }
         function tryHostGame() {

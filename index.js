@@ -248,6 +248,7 @@ wss.on('connection', function connection(ws) {
                     i.ws.send(JSON.stringify({
                         state: "bill_confirmed",
                         bill_id: data.bill_id,
+                        bill_passees:currentRoom.player_bill_submissions[data.bill_id].votes,
                         bill_pass_count: Object.entries(currentRoom.player_bill_submissions[data.bill_id].votes).length,
                         player_index: ws_data_obj.player_index
                     }));
@@ -283,6 +284,22 @@ wss.on('connection', function connection(ws) {
                         }))
                     }
                     progressRoom(currentRoom);
+                }
+                // if all bills exist, cry.
+                // confirm the currently presented bill (maybe put in a bill ID just in case)
+                // if all n players confirm the bill, end the round
+                break;
+            case "unconfirm_bill":
+                //broadcast the bill confirmation to everyone
+                delete currentRoom.player_bill_submissions[data.bill_id].votes[ws_data_obj.player_index];
+                for (let i of currentRoom.players) {
+                    i.ws.send(JSON.stringify({
+                        state: "bill_confirmed",
+                        bill_id: data.bill_id,
+                        bill_passees:currentRoom.player_bill_submissions[data.bill_id].votes,
+                        bill_pass_count: Object.entries(currentRoom.player_bill_submissions[data.bill_id].votes).length,
+                        player_index: ws_data_obj.player_index
+                    }));
                 }
                 // if all bills exist, cry.
                 // confirm the currently presented bill (maybe put in a bill ID just in case)
