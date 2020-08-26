@@ -26,7 +26,7 @@ let active_games = {
     */
 };
 
-const rounds_per_set=5;
+const rounds_per_set = 5;
 
 function guid(count = 6) {
     let pool = "1234567890qwertyuiopasdfghjklzxcvbnm";
@@ -49,12 +49,12 @@ function progressRoom(currentRoom, first) {
                 player_intel_scores: currentRoom.players.map(i => i.intel_score)
             }))
         }
-        currentRoom.host.send({
-            state:"podium",
+        currentRoom.host.send(JSON.stringify({
+            state: "podium",
             player_scores: currentRoom.players.map(i => i.score),
             player_intel_scores: currentRoom.players.map(i => i.intel_score)
-        })
-        currentRoom.concluded=true;
+        }));
+        currentRoom.concluded = true;
         return;
     } else {
         currentRoom.current_set++;
@@ -343,9 +343,9 @@ wss.on('connection', function connection(ws) {
                     clearTimeout(currentRoom.billExpiryTimeout);
                     currentRoom.current_set = 0;
                     progressRoom(currentRoom);
-                } else if ("concluded" in currentRoom){
+                } else if ("concluded" in currentRoom) {
                     //lol do nothing, no need
-                }else{
+                } else {
                     currentRoom.players.splice(ws_data_obj.player_index, 1);
                     currentRoom.player_order.splice(ws_data_obj.player_index, 1);
                     //resend waiting room for all players
