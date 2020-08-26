@@ -425,7 +425,7 @@
         [handleDragEnd, "touchend", "mouseup"],
         ].forEach(i => {
             i.slice(1).forEach((en) => {
-                document.querySelector(".proto-resolution-dragdrop").addEventListener(en, i[0]);
+                window.addEventListener(en, i[0]);
             })
         });
         document.querySelector("#gid").addEventListener("keydown", (e) => {

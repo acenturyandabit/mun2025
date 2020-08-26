@@ -262,7 +262,6 @@ wss.on('connection', function connection(ws) {
                                 if (player.private_resolutions.indexOf(i) >= ii && player.private_resolutions.indexOf(i) <= 3) {
                                     p++;
                                 }
-                                console.log(`${i} was ${player.private_resolutions.indexOf(i)} vs ${ii}`)
                                 return p;
                             }, 0);
                         } else {
