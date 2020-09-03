@@ -170,7 +170,8 @@ wss.on('connection', function connection(ws) {
                     active_games[data.room_id].players.push({
                         ws: ws,
                         intel_score: 0,
-                        score: 0
+                        score: 0,
+                        obj: ws_data_obj
                     });
                     ws_data_obj.room_id = data.room_id;
                     ws_data_obj.player_index = active_games[data.room_id].players.length - 1;
@@ -248,7 +249,7 @@ wss.on('connection', function connection(ws) {
                     i.ws.send(JSON.stringify({
                         state: "bill_confirmed",
                         bill_id: data.bill_id,
-                        bill_passees:currentRoom.player_bill_submissions[data.bill_id].votes,
+                        bill_passees: currentRoom.player_bill_submissions[data.bill_id].votes,
                         bill_pass_count: Object.entries(currentRoom.player_bill_submissions[data.bill_id].votes).length,
                         player_index: ws_data_obj.player_index
                     }));
@@ -296,7 +297,7 @@ wss.on('connection', function connection(ws) {
                     i.ws.send(JSON.stringify({
                         state: "bill_confirmed",
                         bill_id: data.bill_id,
-                        bill_passees:currentRoom.player_bill_submissions[data.bill_id].votes,
+                        bill_passees: currentRoom.player_bill_submissions[data.bill_id].votes,
                         bill_pass_count: Object.entries(currentRoom.player_bill_submissions[data.bill_id].votes).length,
                         player_index: ws_data_obj.player_index
                     }));
@@ -322,9 +323,10 @@ wss.on('connection', function connection(ws) {
             //rearrange sets
             //restart round
         }
-        ws.on("close", () => {
+        ws.on("close", (e) => {
             let currentRoom;
             if (ws_data_obj.room_id) currentRoom = active_games[ws_data_obj.room_id];
+            else return;
             if (currentRoom) {
                 if (currentRoom.host == ws) {
                     //kick everyone
@@ -338,17 +340,18 @@ wss.on('connection', function connection(ws) {
                 if ("current_round" in currentRoom) {
                     //game has started
                     currentRoom.players.splice(ws_data_obj.player_index, 1);
+                    currentRoom.player_order.splice(ws_data_obj.player_index, 1);
                     if (currentRoom.players.length == 0) {
                         currentRoom.host.close();
                         return;
                     }
-                    currentRoom.player_order.splice(ws_data_obj.player_index, 1);
-                    for (let i of currentRoom.players) {
+                    for (let [ind, i] of currentRoom.players.entries()) {
                         i.ws.send(JSON.stringify({
                             state: "player_disconnected",
                             leaver: ws_data_obj.player_index,
                             remaining: currentRoom.players.map((i, ii) => currentRoom.player_order[ii])
                         }))
+                        i.obj.player_index = ind;
                     }
                     currentRoom.host.send(JSON.stringify({
                         state: "player_disconnected",
@@ -359,6 +362,9 @@ wss.on('connection', function connection(ws) {
                     clearTimeout(currentRoom.billExpiryTimeout);
                     currentRoom.current_set = 0;
                     progressRoom(currentRoom);
+                    delete ws_data_obj.room_id; // do not double eject
+                    console.log(`someone died: self id: ${ws_data_obj.player_index}`);
+                    console.log(e);
                 } else if ("concluded" in currentRoom) {
                     //lol do nothing, no need
                 } else {
