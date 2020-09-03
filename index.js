@@ -43,11 +43,13 @@ function progressRoom(currentRoom, first) {
         currentRoom.players.forEach(i => i.score = 0);
     } else if (currentRoom.current_round == rounds_per_set * currentRoom.player_sets.length - 1) {
         for (let i of currentRoom.players) {
-            i.ws.send(JSON.stringify({
-                state: "podium",
-                player_scores: currentRoom.players.map(i => i.score),
-                player_intel_scores: currentRoom.players.map(i => i.intel_score)
-            }))
+            setTimeout(() => {
+                i.ws.send(JSON.stringify({
+                    state: "podium",
+                    player_scores: currentRoom.players.map(i => i.score),
+                    player_intel_scores: currentRoom.players.map(i => i.intel_score)
+                }))
+            }, 5000);
         }
         currentRoom.host.send(JSON.stringify({
             state: "podium",
@@ -143,7 +145,7 @@ wss.on('connection', function connection(ws) {
         switch (data.action) {
             case "enter_game":
                 if (active_games[data.room_id]) {
-                    if (active_games[data.room_id].players.length > 11) {
+                    if (active_games[data.room_id].players.length > 60) {
                         ws.send(JSON.stringify({
                             state: "too_many_players"
                         }));
@@ -161,18 +163,18 @@ wss.on('connection', function connection(ws) {
                             player_alias: active_games[data.room_id].player_order[active_games[data.room_id].players.length]
                         }))
                     })
-                    active_games[data.room_id].host.send(
-                        JSON.stringify({
-                            state: "new_player",
-                            player_alias: active_games[data.room_id].player_order[active_games[data.room_id].players.length]
-                        })
-                    )
                     active_games[data.room_id].players.push({
                         ws: ws,
                         intel_score: 0,
                         score: 0,
                         obj: ws_data_obj
                     });
+                    active_games[data.room_id].host.send(
+                        JSON.stringify({
+                            state: "waiting_room",
+                            players: active_games[data.room_id].player_order.slice(0, active_games[data.room_id].players.length)
+                        })
+                    )
                     ws_data_obj.room_id = data.room_id;
                     ws_data_obj.player_index = active_games[data.room_id].players.length - 1;
                     ws.send(JSON.stringify({
@@ -191,7 +193,7 @@ wss.on('connection', function connection(ws) {
                 let uid;
                 while (!uid || active_games[uid]) uid = guid();
                 active_games[uid] = {
-                    player_order: lore.countries.sample(20).shuffled(),
+                    player_order: lore.countries.sample(60).shuffled(),
                     players: [],
                     host: ws
                 };
@@ -361,6 +363,7 @@ wss.on('connection', function connection(ws) {
                     clearTimeout(currentRoom.prestartTimeout);
                     clearTimeout(currentRoom.billExpiryTimeout);
                     currentRoom.current_set = 0;
+                    currentRoom.current_round--;
                     progressRoom(currentRoom);
                     delete ws_data_obj.room_id; // do not double eject
                     console.log(`someone died: self id: ${ws_data_obj.player_index}`);
@@ -380,8 +383,10 @@ wss.on('connection', function connection(ws) {
                         }));
                     });
                     currentRoom.host.send(JSON.stringify({
-                        state: "player_disconnected",
-                        player: ws_data_obj.player_index
+                        state: "waiting_room",
+                        uid: data.room_id,
+                        players: active_games[data.room_id].players.map((i, ii) => active_games[data.room_id].player_order[ii]),
+                        player_alias: active_games[data.room_id].player_order[active_games[data.room_id].players.length - 1]
                     }));
                 }
             }

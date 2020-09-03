@@ -4,10 +4,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto@1&display=swap" rel="stylesheet">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Model UN 2021</title>
-    <link rel="icon" href="logo.svg">
+    <link rel="icon" href="logo2.png">
 </head>
 
 <body>
+    <script src="makeflag.js"></script>
     <style>
         body {
             background-color: darkblue;
@@ -38,7 +39,8 @@
             }
         }
 
-        img {
+        img,
+        canvas {
             width: 40%;
             padding: 30px 0;
         }
@@ -89,7 +91,8 @@
             }
         </style>
         <h1>Model UN 2021</h1>
-        <img src="logo.svg"></img>
+        <h2>A game about diplomacy, for 3-5 players</h2>
+        <img src="logo2.png"></img>
         <input id="gid" placeholder="Game ID"></input>
         <button onclick="tryEnterGame()">Join Game</button>
         <h2 id="invalid_gid" style="display:none">Invalid game ID :(</h2>
@@ -339,6 +342,11 @@
     </div>
     <script>
         let reveal_timers = [];
+        function reset_reveals() {
+            reveal_timers.forEach(i => clearTimeout(i));
+            reveal_timers = [];
+        }
+
 
         let room = {};
         let dragManagedItem;
@@ -451,7 +459,7 @@
         let ws;
         function tryEnterGame() {
             if (!document.querySelector("#gid").value) {
-                document.querySelector("#invalid_gid").innerText = "Please enter room name";
+                document.querySelector("#invalid_gid").innerText = "Please enter room ID";
                 document.querySelector("#invalid_gid").style.display = "block";
                 document.querySelector("#invalid_gid").classList.remove("red_flashy");
                 setTimeout(() => {
@@ -484,8 +492,10 @@
                             renderTo(".nation-name", `
                             <p>You are the diplomat for</p>
                             <h2>${data.player_alias}</h2>
-                            <img src='flags/Flag_of_${data.player_alias.replace(/ /g, "_").replace("The", "the").replace(/'/g, "_")}.svg'></img>
+                            <canvas></canvas>
                             `);
+                            let c = document.querySelector(".nation-name canvas");
+                            makeFlag(data.player_alias, c);
                             room.player_alias = data.player_alias;
                             switchPanel("screen", "waitingRoom");
                             break;
@@ -522,12 +532,13 @@
                         case "start_game":
                             room.players = data.players;
                             renderTo(".inter-round-modal", `
-                            <img src="logo.svg"></img>
+                            <img src="logo2.png"></img>
                             <h3>Entering summit...</h3>
                             <p>Current round begins in <span class="inter-round-countdown">5</span></p>
                             `);
                             renderTo(".nation-name-p", room.player_alias)
                             document.querySelector(".inter-round-modal").style.display = "flex";
+                            reset_reveals();
                             for (let i = 0; i < 4; i++) {
                                 reveal_timers.push(setTimeout(() => renderTo(".inter-round-countdown", 4 - i), 1000 * (i + 1)));
                             }
@@ -540,6 +551,7 @@
                             console.log(data);
                             room.current_set = data.current_set;
                             room.current_round = data.current_round;
+                            room.total_rounds = data.total_rounds;
                             room.own_set = data.own_set;
                             room.private_resolutions = data.private_resolutions;
                             room.present_order = data.resolutions.map((i, ii) => ii);
@@ -573,6 +585,7 @@
                             room.min_remaining = 5;
                             room.sec_remaining = 0;
                             renderTo(".remaining-time", `${room.min_remaining}:${room.sec_remaining > 10 ? "" : "0"}${room.sec_remaining}`);
+                            clearInterval(room.remaining_ticker);// just in case
                             room.remaining_ticker = setInterval(() => {
                                 room.sec_remaining--;
                                 if (room.sec_remaining < 0) {
@@ -613,6 +626,8 @@
                             accdiv.innerHTML = Object.keys(data.bill_passees).map(i => `<p>Bill accepted by ${room.player_aliases[i]}</p>`).join("\n");
                             break;
                         case "bill_failed":
+                            nextText = (room.total_rounds != room.current_round + 1) ? "Next round begins in" : "Final results in";
+
                             renderTo(".inter-round-modal", `
                             <h3>Result:</h3>
             <p class="roundresult">Bill passed / rejected</p>
@@ -620,7 +635,7 @@
 
             </div>
             <p>Your current score: <span class="playerscore"></span></p>
-            <p>Next round begins in <span class="inter-round-countdown"></span></p>
+            <p>${nextText} <span class="inter-round-countdown"></span></p>
                             `)
                             //say bill failed   
                             renderTo(".roundresult", "No bill passed :(")
@@ -630,6 +645,7 @@
                             renderTo(".playerscore", `${data.score}`);
 
                             renderTo(".inter-round-countdown", 5);
+                            reset_reveals();
                             for (let i = 0; i < 4; i++) {
                                 reveal_timers.push(setTimeout(() => renderTo(".inter-round-countdown", 4 - i), 1000 * (i + 1)));
                             }
@@ -638,6 +654,7 @@
                             document.querySelector(".inter-round-modal").style.display = "flex";
                             break;
                         case "bill_passed":
+                            nextText = (room.total_rounds != room.current_round + 1) ? "Next round begins in" : "Final results in";
                             renderTo(".inter-round-modal", `
                             <h3>Result:</h3>
             <p class="roundresult">Bill passed / rejected</p>
@@ -645,7 +662,7 @@
 
             </div>
             <p>Your current score: <span class="playerscore"></span></p>
-            <p>Next round begins in <span class="inter-round-countdown"></span></p>
+            <p>${nextText} <span class="inter-round-countdown"></span></p>
                             `)
                             document.querySelector(".inter-round-modal").style.display = "flex";
                             renderTo(".roundresult", "Bill Passed!");
@@ -655,6 +672,7 @@
                             clearTimeout(room.remaining_ticker);
 
                             renderTo(".inter-round-countdown", 5);
+                            reset_reveals();
                             for (let i = 0; i < 4; i++) {
                                 reveal_timers.push(setTimeout(() => renderTo(".inter-round-countdown", 4 - i), 1000 * (i + 1)));
                             }
@@ -664,27 +682,29 @@
                             document.querySelector(".inter-round-modal").style.display = "flex";
                             break;
                         case "player_disconnected":
+                            nextText = (room.total_rounds != room.current_round + 1) ? "Next round begins in" : "Final results in";
                             renderTo(".inter-round-modal", `
                             <h3>A fellow diplomat has been disconnected</h3>
                             <p>Please hold while we re-establish order.</p>
-                            <h3>You may be assigned to a new negotiation cluster.</h3>
                             <p>The United Nations appreciates your patience.</p>
-                            <img src="logo.svg"></img>
-                            <p>Next round begins in <span class="inter-round-countdown"></span></p>
+                            <img src="logo2.png"></img>
+                            <p>${nextText} <span class="inter-round-countdown"></span></p>
                             `)
                             renderTo(".inter-round-countdown", 5);
+                            reset_reveals();
                             for (let i = 0; i < 4; i++) {
                                 reveal_timers.push(setTimeout(() => renderTo(".inter-round-countdown", 4 - i), 1000 * (i + 1)));
                             }
                             reveal_timers.push(setTimeout(() => document.querySelector(".inter-round-modal").style.display = "none", 5000));
                             document.querySelector(".inter-round-modal").style.display = "flex";
+
                             break;
                         case "podium":
                             let winners = data.player_scores.map((i, ii) => [room.players[ii], i]).sort((a, b) => b[1] - a[1]);
                             renderTo(".podium", `
                         <h3>Congratulations to<h3>
                         <h2>The representative for ${winners[0][0]}<h2>
-                            <img src='flags/Flag_of_${winners[0][0].replace(/ /g, "_").replace("The", "the")}.svg'></img>
+                            <canvas></canvas>
                             <h4>For their outstanding diplomatic service to their country!</h4>
                             <h3>Final Ranking</h3>
                             <div>
@@ -693,19 +713,23 @@
                                 }
                             </div>
                             <h3> The UN summit 2021 has concluded. Thank you for your participation.</h3>
+                            <p>Reload this window to start a new game.</p>
                             `)
+
+                            nc = document.querySelector(".podium canvas");
+                            makeFlag(winners[0][0], nc);
                             switchPanel("screen", "podium")
                             break;
                     }
                 });
                 ws.addEventListener("close", () => {
-                    reveal_timers.forEach(i => clearTimeout(i));
+                    reset_reveals();
                     switchPanel("screen", "main");
                     renderTo(".inter-round-modal", `
                             <h3>Connection lost</h3>
                             <p>Re-connection functionality has not been implemented yet.</p>
                             <p>Please re-establish contact with the game host as soon as possible.</p>
-                            <img src="logo.svg"></img>
+                            <img src="logo2.png"></img>
                             `)
                     document.querySelector(".inter-round-modal").style.display = "flex";
                 })
@@ -768,16 +792,26 @@
                             // take them to the waiting room
                             renderTo("#gid_rep", data.uid);
                             renderTo(".player-head", "Players:");
-                            renderTo(".nation-name", "<p>You are the game host. (If you would like to play, please open a new window.)</p> <img src='logo.svg'>");
-                            document.querySelector(".wstart").disabled = false;
-                            document.querySelector(".wstart").innerText = "Press to start";
+                            renderTo(".nation-name", "<p>You are the game host. (If you would like to play, please open a new window.)</p> <img src='logo2.png'>");
+                            document.querySelector(".wstart").innerText = "At least 3 players required";
+                            document.querySelector(".wstart").disabled = true;
                             switchPanel("screen", "waitingRoom");
                             break;
-                        case "new_player":
+                        case "waiting_room":
                             //add a new player
-                            let d = document.createElement("div");
-                            d.innerText = data.player_alias;
-                            document.querySelector(".player-list").appendChild(d);
+                            document.querySelectorAll(".player-list div").forEach(i => i.remove());
+                            for (let i of data.players) {
+                                let d = document.createElement("div");
+                                d.innerText = i;
+                                document.querySelector(".player-list").appendChild(d);
+                            }
+                            if (data.players.length > 2) {
+                                document.querySelector(".wstart").innerText = "Start game";
+                                document.querySelector(".wstart").disabled = false;
+                            } else {
+                                document.querySelector(".wstart").innerText = "At least 3 players required";
+                                document.querySelector(".wstart").disabled = true;
+                            }
                             break;
                         case "start_game":
                             console.log("got start");
@@ -791,11 +825,13 @@
                             break;
                         case "podium":
                             renderTo(".inter-round-modal", `
-                            <img src="logo.svg"></img>
+                            <img src="logo2.png"></img>
                             <h3>The game has concluded.</h3>
                             <p>Thanks for playing!</p>
+                            <p>Reload this window to start a new game</p>
                             `);
                             document.querySelector(".inter-round-modal").style.display = "flex";
+                            document.body.appendChild(document.querySelector(".inter-round-modal"));
                             break;
                     }
                 })

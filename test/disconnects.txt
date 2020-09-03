@@ -1,0 +1,10 @@
+disconnect during countup
+disconnect during round
+disconnect, wait a round, reconnect
+
+play 1 round, then disconnect
+
+two people leave the room
+
+
+failure mode: one player left :(
