@@ -120,11 +120,7 @@ function progressRoom(currentRoom, first) {
                 }
                 delete player.private_guess;
             }
-        })
-
-        for (let i of currentRoom.player_sets[currentRoom.current_set]) {
-            currentRoom.players[i].score += currentRoom.players[i].bill_penalty;
-        }
+        });
         for (let i of currentRoom.players) {
             i.ws.send(JSON.stringify({
                 state: "bill_failed",

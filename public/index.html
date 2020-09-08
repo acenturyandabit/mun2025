@@ -3,7 +3,7 @@
 <head>
     <link href="https://fonts.googleapis.com/css2?family=Roboto@1&display=swap" rel="stylesheet">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Model UN 2021</title>
+    <title>Model UN 2025</title>
     <link rel="icon" href="logo2.png">
 </head>
 
@@ -90,15 +90,97 @@
                 text-align: center;
             }
         </style>
-        <h1>Model UN 2021</h1>
-        <h2>A game about diplomacy, for 3-5 players</h2>
+        <h1>Model UN 2025</h1>
+        <h2>A game about diplomacy, for groups of 3-5 players</h2>
         <img src="logo2.png"></img>
         <input id="gid" placeholder="Game ID"></input>
         <button onclick="tryEnterGame()">Join Game</button>
         <h2 id="invalid_gid" style="display:none">Invalid game ID :(</h2>
         <button onclick="tryHostGame()">Host Game</button>
+        <button onclick="showRules()">Rules & About</button>
         <!--<a href="acenturyandabit.github.io/mun2200">About</a>-->
+        <!-- modal for rules -->
+        <div class="about-modal" style="display:none">
+            <style>
+                .closebutton {
+                    width: 100%;
+                    bottom: 0;
+                    padding: 20px 0;
+                    border-radius: 10px;
+                    display: grid;
+                    justify-items: center;
+                    align-items: center;
+                    color: white;
+                    background: blue;
+                    cursor: pointer;
+                }
 
+                /* Hide scrollbar for Chrome, Safari and Opera */
+                .about-modal div::-webkit-scrollbar {
+                    display: none;
+                }
+
+                /* Hide scrollbar for IE, Edge and Firefox */
+                .about-modal div {
+                    -ms-overflow-style: none;
+                    /* IE and Edge */
+                    scrollbar-width: none;
+                    /* Firefox */
+                }
+
+                video {
+                    width: 50%;
+                }
+            </style>
+            <div style="overflow-y:scroll">
+                <h1>About the game</h1>
+                <p>Model UN 2025 is a drastically simplified Model United Nations Summit in game form. </p>
+                <p>Each player represents a nation that tries to maximise its <strong>international advantage</strong>
+                    by
+                    negotiating with other nations in a series of rounds. </p>
+                <p>In each round, the UN unanimously decides on a single bill. The bill consists of a number of
+                    proposals.
+                    However, different countries have different priorities for these proposals.</p>
+                <h2>Sample game</h2>
+                <p>Jenny, Sam and Eddie are playing as the Ambassadors for XXX, YYY and ZZZ respectively. </p>
+                <p>Jenny is playing as the Ambassador for XXX. She needs to prioritize proposals A, D, F, B, so she
+                    drags
+                    the bills into the order A, D, F, B. From this ordering, she will gain 4 <strong>international
+                        advantage</strong>.</strong></p>
+                <video muted autoplay loop src="instructions/rearrange.mp4"></video>
+                <p>Jenny now submits the bill. At the same time, Sam and Eddie also order their proposals and submit.
+                </p>
+                <p>Jenny is taken to the voting screen. On the voting screen, she can see the bills the other players
+                    have
+                    submitted, and she accepts the other bills which give her a good number of points.</p>
+                <video muted autoplay loop src="instructions/acceptbill.mp4"></video>
+                <p>However, no bill passes unianimously as yet, so Jenny needs to try and re-negotiate the bill. She
+                    notices
+                    that lots of people prefer Proposal AAA, and so she goes back and creates a new bill that has AAA
+                    placed
+                    higher.</p>
+                </p>This will cost her one <strong>international advantage</strong> if it passes, but is more likely to
+                pass, giving her 3 <strong>international advantage</strong>.</p>
+                <video muted autoplay loop src="instructions/rearrangebill.mp4"></video>
+                </p>Once she resubmits, if everyone accepts, they will each gain the amount of <strong>international
+                    advantage</strong> that the accepted bill gives them.</p>
+                <video muted autoplay loop src="instructions/acceptance.mp4"></video>
+                </p>However, if no-one's bill is accepted after the round is complete, then everyone will lose the
+                amount of
+                <strong>international advantage</strong> listed on their screen.</p>
+                <video muted autoplay loop src="instructions/failure.mp4"></video>
+                </p>Finally, the country with the most <strong>international advantage</strong> over all the rounds
+                wins!
+                </p>
+                <video muted autoplay loop src="instructions/podium.mp4"></video>
+                <h2>Credits</h2>
+                <p>This game was developed by Steven Liu. For feedback and more, please reach out via email at <a
+                        href="mailto:steeven.liu2@gmail.com">steeven.liu2@gmail.com</a></a></p>
+                <!--<h2>Extra options</h2>
+                <p>A number of extra options are available in the host menu which can make the game lean towards either diplomacy or treachery. Experiment and see: how does the nature of the game affect its outcome?</p>-->
+            </div>
+            <div class="closebutton" onclick="hideRules()">Let's play!</div>
+        </div>
         <!-- first enter; choose to join or host a game -->
     </div>
     <div data-screen="waitingRoom">
@@ -144,6 +226,8 @@
                 flex-direction: column;
             }
 
+
+            .about-modal,
             .inter-round-modal {
                 position: absolute;
                 flex-direction: column;
@@ -153,7 +237,8 @@
                 top: 0;
                 left: 0;
                 background: rgba(0, 0, 0, 0.7);
-                width: 100%;
+                width: calc(100% - 2 * max(50vw - 400px, 0px));
+                padding: 0 max(50vw - 400px, 0px);
                 height: 100%;
             }
         </style>
@@ -280,7 +365,6 @@
             <div class="history-list">
             </div>
             <p>Scroll down to view others' proposed bills from this round.</p>
-            <p>You can only approve the latest bill - click "Propose bill" to propose a new bill.</p>
         </div>
         <div class="navigation">
             <style>
@@ -712,7 +796,7 @@
                                 winners.map(i => `<p>${i[0]}:${i[1]}</p>`).join("")
                                 }
                             </div>
-                            <h3> The UN summit 2021 has concluded. Thank you for your participation.</h3>
+                            <h3> The UN summit 2025 has concluded. Thank you for your participation.</h3>
                             <p>Reload this window to start a new game.</p>
                             `)
 
@@ -855,6 +939,13 @@
             ws.send(JSON.stringify({
                 action: "start_game"
             }))
+        }
+
+        function showRules() {
+            document.querySelector(".about-modal").style.display = "flex";
+        }
+        function hideRules() {
+            document.querySelector(".about-modal").style.display = "none";
         }
     </script>
 </body>
