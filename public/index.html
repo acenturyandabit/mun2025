@@ -147,13 +147,13 @@
                     drags
                     the bills into the order A, D, F, B. From this ordering, she will gain 4 <strong>international
                         advantage</strong>.</strong></p>
-                <video muted autoplay loop src="instructions/rearrange.mp4"></video>
+                <video muted autoplay loop data-src="instructions/rearrange.mp4"></video>
                 <p>Jenny now submits the bill. At the same time, Sam and Eddie also order their proposals and submit.
                 </p>
                 <p>Jenny is taken to the voting screen. On the voting screen, she can see the bills the other players
                     have
                     submitted, and she accepts the other bills which give her a good number of points.</p>
-                <video muted autoplay loop src="instructions/acceptbill.mp4"></video>
+                <video muted autoplay loop data-src="instructions/acceptbill.mp4"></video>
                 <p>However, no bill passes unianimously as yet, so Jenny needs to try and re-negotiate the bill. She
                     notices
                     that lots of people prefer Proposal AAA, and so she goes back and creates a new bill that has AAA
@@ -161,18 +161,18 @@
                     higher.</p>
                 </p>This will cost her one <strong>international advantage</strong> if it passes, but is more likely to
                 pass, giving her 3 <strong>international advantage</strong>.</p>
-                <video muted autoplay loop src="instructions/rearrangebill.mp4"></video>
+                <video muted autoplay loop data-src="instructions/rearrangebill.mp4"></video>
                 </p>Once she resubmits, if everyone accepts, they will each gain the amount of <strong>international
                     advantage</strong> that the accepted bill gives them.</p>
-                <video muted autoplay loop src="instructions/acceptance.mp4"></video>
+                <video muted autoplay loop data-src="instructions/acceptance.mp4"></video>
                 </p>However, if no-one's bill is accepted after the round is complete, then everyone will lose the
                 amount of
                 <strong>international advantage</strong> listed on their screen.</p>
-                <video muted autoplay loop src="instructions/failure.mp4"></video>
+                <video muted autoplay loop data-src="instructions/failure.mp4"></video>
                 </p>Finally, the country with the most <strong>international advantage</strong> over all the rounds
                 wins!
                 </p>
-                <video muted autoplay loop src="instructions/podium.mp4"></video>
+                <video muted autoplay loop data-src="instructions/podium.mp4"></video>
                 <h2>Credits</h2>
                 <p>This game was developed by Steven Liu. For feedback and more, please reach out via email at <a
                         href="mailto:steeven.liu2@gmail.com">steeven.liu2@gmail.com</a></a></p>
@@ -942,6 +942,7 @@
         }
 
         function showRules() {
+            document.querySelectorAll("[data-src]").forEach(i=>i.src=i.dataset.src);
             document.querySelector(".about-modal").style.display = "flex";
         }
         function hideRules() {
