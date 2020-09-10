@@ -425,6 +425,12 @@
         <!--premise and settings-->
     </div>
     <script>
+
+        //Quick domain check: if we're not at the hosting domain then go there
+        if (!window.location.href.includes("172.105.176.108")){
+            window.location.href="http://172.105.176.108:8031";
+        }
+
         let reveal_timers = [];
         function reset_reveals() {
             reveal_timers.forEach(i => clearTimeout(i));
