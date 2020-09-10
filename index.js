@@ -1,8 +1,8 @@
 const WebSocket = require('ws');
 const express = require("express");
-const lore = require("./public/lore");
+const lore = require("./docs/lore");
 var app = express();
-app.use(express.static("public"));
+app.use(express.static("docs"));
 app.listen(8031);
 const wss = new WebSocket.Server({ port: 3320 });
 //push test...
