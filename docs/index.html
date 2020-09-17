@@ -427,8 +427,8 @@
     <script>
 
         //Quick domain check: if we're not at the hosting domain then go there
-        if (!window.location.href.includes("172.105.176.108")){
-            window.location.href="http://172.105.176.108:8031";
+        if (!window.location.href.includes("172.105.176.108")) {
+            window.location.href = "http://172.105.176.108:8031";
         }
 
         let reveal_timers = [];
@@ -798,8 +798,7 @@
                             <h4>For their outstanding diplomatic service to their country!</h4>
                             <h3>Final Ranking</h3>
                             <div>
-                                ${
-                                winners.map(i => `<p>${i[0]}:${i[1]}</p>`).join("")
+                                ${winners.map(i => `<p>${i[0]}:${i[1]}</p>`).join("")
                                 }
                             </div>
                             <h3> The UN summit 2025 has concluded. Thank you for your participation.</h3>
@@ -905,7 +904,7 @@
                             break;
                         case "start_game":
                             console.log("got start");
-                            Array.from(document.querySelectorAll(".player-list div")).forEach((i) => i.innerHTML = `${i.innerHTML}<button>Eject player</button>`);
+                            Array.from(document.querySelectorAll(".player-list div")).forEach((i) => i.innerHTML = `${i.innerHTML}<button class="alive">Eject player</button>`);
                             document.querySelector(".wstart").style.display = "none";
                             break;
                         case "player_disconnected":
@@ -934,11 +933,12 @@
             if (e.target.matches("button")) {
                 console.log("yeet");
                 //kick the player
-                let player_index = Array.from(document.querySelectorAll(".player-list button")).indexOf(e.target);
+                let player_index = Array.from(document.querySelectorAll(".player-list button.alive")).indexOf(e.target);
                 ws.send(JSON.stringify({
                     action: "kick_player",
                     player: player_index
                 }))
+                e.target.classList.remove("alive");
             }
         })
         function hostStart() {
@@ -948,7 +948,7 @@
         }
 
         function showRules() {
-            document.querySelectorAll("[data-src]").forEach(i=>i.src=i.dataset.src);
+            document.querySelectorAll("[data-src]").forEach(i => i.src = i.dataset.src);
             document.querySelector(".about-modal").style.display = "flex";
         }
         function hideRules() {

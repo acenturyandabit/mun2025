@@ -292,13 +292,17 @@ wss.on('connection', function connection(ws) {
                 //broadcast the bill confirmation to everyone
                 delete currentRoom.player_bill_submissions[data.bill_id].votes[ws_data_obj.player_index];
                 for (let i of currentRoom.players) {
-                    i.ws.send(JSON.stringify({
-                        state: "bill_confirmed",
-                        bill_id: data.bill_id,
-                        bill_passees: currentRoom.player_bill_submissions[data.bill_id].votes,
-                        bill_pass_count: Object.entries(currentRoom.player_bill_submissions[data.bill_id].votes).length,
-                        player_index: ws_data_obj.player_index
-                    }));
+                    try {
+                        i.ws.send(JSON.stringify({
+                            state: "bill_confirmed",
+                            bill_id: data.bill_id,
+                            bill_passees: currentRoom.player_bill_submissions[data.bill_id].votes,
+                            bill_pass_count: Object.entries(currentRoom.player_bill_submissions[data.bill_id].votes).length,
+                            player_index: ws_data_obj.player_index
+                        }));
+                    } catch (e) {
+                        console.log(`player ${i} does not exist`);
+                    }
                 }
                 // if all bills exist, cry.
                 // confirm the currently presented bill (maybe put in a bill ID just in case)
@@ -313,7 +317,12 @@ wss.on('connection', function connection(ws) {
                 break;
             case "kick_player":
                 //eject the player
-                currentRoom.players[data.player].ws.close();
+                try {
+                    currentRoom.players[data.player].ws.close();
+                } catch (e) {
+                    //kick went wrong
+                    console.log(`kick error: player ${data.player} does not exist`);
+                }
                 break;
             //clear round timer(s)
             //reallocate sets
@@ -329,6 +338,12 @@ wss.on('connection', function connection(ws) {
                 if (currentRoom.host == ws) {
                     //kick everyone
                     currentRoom.players.forEach(i => {
+                        try {
+                            i.ws.close();
+                        } catch (e) {
+                            //kick went wrong
+                            console.log(`kick error: tried to close nonexistent port`);
+                        }
                         i.ws.close();
                     })
                     clearTimeout(currentRoom.prestartTimeout);
@@ -344,11 +359,15 @@ wss.on('connection', function connection(ws) {
                         return;
                     }
                     for (let [ind, i] of currentRoom.players.entries()) {
-                        i.ws.send(JSON.stringify({
-                            state: "player_disconnected",
-                            leaver: ws_data_obj.player_index,
-                            remaining: currentRoom.players.map((i, ii) => currentRoom.player_order[ii])
-                        }))
+                        try {
+                            i.ws.send(JSON.stringify({
+                                state: "player_disconnected",
+                                leaver: ws_data_obj.player_index,
+                                remaining: currentRoom.players.map((i, ii) => currentRoom.player_order[ii])
+                            }))
+                        } catch (e) {
+                            console.log(`send failed, player ${i} does not exist`);
+                        }
                         i.obj.player_index = ind;
                     }
                     currentRoom.host.send(JSON.stringify({
