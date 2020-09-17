@@ -355,6 +355,11 @@ wss.on('connection', function connection(ws) {
                     currentRoom.players.splice(ws_data_obj.player_index, 1);
                     currentRoom.player_order.splice(ws_data_obj.player_index, 1);
                     if (currentRoom.players.length == 0) {
+                        currentRoom.host.send(JSON.stringify({
+                            state: "player_disconnected",
+                            leaver: ws_data_obj.player_index,
+                            remaining: []
+                        }))
                         currentRoom.host.close();
                         return;
                     }
@@ -372,7 +377,8 @@ wss.on('connection', function connection(ws) {
                     }
                     currentRoom.host.send(JSON.stringify({
                         state: "player_disconnected",
-                        player: ws_data_obj.player_index
+                        leaver: ws_data_obj.player_index,
+                        remaining: currentRoom.players.map((i, ii) => currentRoom.player_order[ii])
                     }))
                     currentRoom.player_sets = [currentRoom.players.map((i, ii) => ii)];
                     clearTimeout(currentRoom.prestartTimeout);

@@ -787,7 +787,8 @@
                             }
                             reveal_timers.push(setTimeout(() => document.querySelector(".inter-round-modal").style.display = "none", 5000));
                             document.querySelector(".inter-round-modal").style.display = "flex";
-
+                            // refetch players to make sure podium still works
+                            room.players = data.remaining;
                             break;
                         case "podium":
                             let winners = data.player_scores.map((i, ii) => [room.players[ii], i]).sort((a, b) => b[1] - a[1]);
@@ -866,6 +867,7 @@
             }
         }
         function tryHostGame() {
+            let room = {};
             try {
                 if (ws) ws.close();
                 ws = new WebSocket("ws://" + window.location.hostname + ":3320");
@@ -901,6 +903,7 @@
                                 document.querySelector(".wstart").innerText = "At least 3 players required";
                                 document.querySelector(".wstart").disabled = true;
                             }
+                            room.players = data.players;
                             break;
                         case "start_game":
                             console.log("got start");
@@ -908,21 +911,45 @@
                             document.querySelector(".wstart").style.display = "none";
                             break;
                         case "player_disconnected":
-                            let player_kick_button = Array.from(document.querySelectorAll(".player-list div"))[data.player].querySelector("button");
+                            let player_kick_button = Array.from(document.querySelectorAll(".player-list div button.alive"))[data.player];
+                            player_kick_button.classList.remove("alive");
                             player_kick_button.innerHTML = "DISCONNECTED";
                             player_kick_button.disabled = true;
+                            room.players = data.remaining;
                             break;
                         case "podium":
-                            renderTo(".inter-round-modal", `
-                            <img src="logo2.png"></img>
-                            <h3>The game has concluded.</h3>
-                            <p>Thanks for playing!</p>
-                            <p>Reload this window to start a new game</p>
-                            `);
-                            document.querySelector(".inter-round-modal").style.display = "flex";
-                            document.body.appendChild(document.querySelector(".inter-round-modal"));
+                            let winners = data.player_scores.map((i, ii) => [room.players[ii], i]).sort((a, b) => b[1] - a[1]);
+                            renderTo(".podium", `
+                            <h3>Congratulations to<h3>
+                            <h2>The representative for ${winners[0][0]}<h2>
+                            <canvas></canvas>
+                            <h4>For their outstanding diplomatic service to their country!</h4>
+                            <h3>Final Ranking</h3>
+                            <div>
+                                ${winners.map(i => `<p>${i[0]}:${i[1]}</p>`).join("")
+                                }
+                            </div>
+                            <h3> The UN summit 2025 has concluded. Thank you for your participation.</h3>
+                            <p>Reload this window to start a new game.</p>
+                            `)
+
+                            nc = document.querySelector(".podium canvas");
+                            makeFlag(winners[0][0], nc);
+                            setTimeout(() => { switchPanel("screen", "podium") }, 5000);
+
                             break;
                     }
+                })
+                ws.addEventListener("close", () => {
+                    reset_reveals();
+                    switchPanel("screen", "main");
+                    renderTo(".inter-round-modal", `
+                            <h3>Server Connection Lost</h3>
+                            <p>The game could not continue without the host, and has been terminated.</p>
+                            <p>Please reach out to your players if possible.</p>
+                            <img src="logo2.png"></img>
+                            `)
+                    document.querySelector(".inter-round-modal").style.display = "flex";
                 })
             } catch (e) {
                 console.log("oh no");
@@ -938,7 +965,6 @@
                     action: "kick_player",
                     player: player_index
                 }))
-                e.target.classList.remove("alive");
             }
         })
         function hostStart() {
