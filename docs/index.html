@@ -427,7 +427,7 @@
     <script>
 
         //Quick domain check: if we're not at the hosting domain then go there
-        if (!window.location.href.includes("172.105.176.108")) {
+        if (!window.location.href.includes("172.105.176.108") && !window.location.href.includes("localhost")) {
             window.location.href = "http://172.105.176.108:8031";
         }
 
