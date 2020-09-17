@@ -252,7 +252,7 @@ wss.on('connection', function connection(ws) {
                         player_index: ws_data_obj.player_index
                     }));
                 }
-                currentRoom.last_bill = currentRoom.player_bill_submissions[data.bill_id];
+                currentRoom.last_bill = currentRoom.player_bill_submissions[data.bill_id].bill;
                 if (Object.entries(currentRoom.player_bill_submissions[data.bill_id].votes).length == currentRoom.player_sets[currentRoom.current_set].length) {
                     //all bills passed, calculate score and move on
                     clearTimeout(currentRoom.billExpiryTimeout);
